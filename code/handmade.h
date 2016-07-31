@@ -2,14 +2,39 @@
 #define HANDMADE_H
 
 /*
-	HANDMADE_INTERNAL:
-		0 - Build for public release
-		1 - Build for developer only
+HANDMADE_INTERNAL:
+0 - Build for public release
+1 - Build for developer only
 
-	HANDMADE_SLOW:
-		0 - fast
-		1 - slow
+HANDMADE_SLOW:
+0 - fast
+1 - slow
 */
+
+#include <math.h> // TODO: implement sine ourselves
+#include <stdint.h>
+
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.1415926535f
+
+typedef uint8_t  uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+
+typedef int8_t  int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef int32 bool32;
+
+typedef float real32;
+typedef double real64;
+
+
 
 #if HANDMADE_SLOW
 #	define Assert(Expression) if(!(Expression)){*(int *)0 = 0;}
@@ -38,14 +63,21 @@ inline uint32 SafeTruncateSize32( uint64 Value )
 	These are not for doing anything in the shipping game - they are
 	blocking and the write doesn't protect against lost data!
 */
-	struct debug_read_file_result
-	{
-		uint32 ContentsSize;
-		void *Contents;
-	};
-	internal debug_read_file_result DEBUGPlatformReadEntireFile( char *Filename );
-	internal void DEBUGPlatformFreeFileMemory( void *Memory );
-	internal bool32 DEBUGPlatformWriteEntireFile( char *Filename, uint32 MemorySize, void *Memory );
+struct debug_read_file_result
+{
+	uint32 ContentsSize;
+	void *Contents;
+};
+
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY( name ) void name( void *Memory )
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY( debug_platform_free_file_memory );
+
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE( name ) debug_read_file_result name( char *Filename )
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE( debug_platform_read_entire_file );
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE( name ) bool32 name( char *Filename, uint32 MemorySize, void *Memory )
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE( debug_platform_write_entire_file );
+
 #endif
 
 // -----------------------------------------------------
@@ -122,31 +154,31 @@ inline game_controller_input *GetController( game_input *Input, int ControllerIn
 
 struct game_memory
 {
+	bool32 IsInitialized;
+
 	uint64 PermanentStorageSize;
 	void *PermanentStorage; // REQUIRED to be cleared to zero at startup (every platform have to do it).
 	
 	uint64 TransientStorageSize;
 	void *TransientStorage; // scratch buffer
 
-	bool32 IsInitialized;
+	debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+	debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 };
 
-// timing
-// input controller
-// bitmap to output image
-// buffer to output sound
-internal void 
-GameUpdateAndRender( 
-	game_memory *Memory,
-	game_input *Input,
-	game_offscreen_buffer *pBuffer
-);
+#define GAME_UPDATE_AND_RENDER( name ) void name( game_memory *Memory, game_input *Input, game_offscreen_buffer *pBuffer )
+typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
+GAME_UPDATE_AND_RENDER( GameUpdateAndRenderStub )
+{
+}
 
-internal void
-GameGetSoundSamples(
-	game_memory *Memory,
-	game_sound_output_buffer *pSoundBuffer
-);
+#define GAME_GET_SOUND_SAMPLES( name ) void name( game_memory *Memory, game_sound_output_buffer *pSoundBuffer )
+typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
+GAME_GET_SOUND_SAMPLES( GameGetSoundSamplesStub )
+{
+}
+
 
 //
 //
@@ -156,6 +188,8 @@ struct game_state
 	int ToneHz;
 	int XOffset;
 	int YOffset;
+
+	real32 tSine;
 };
 
 #endif // HANDMADE_H
