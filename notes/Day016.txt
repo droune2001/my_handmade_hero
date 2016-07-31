@@ -1,0 +1,44 @@
+compiler switches:
+-----------------
+
+/MT : static link to C <---
+or
+/MD : link C runtime msvcrt120.dll
+
+-nologo : no more cl.exe copyright banner.
+-Gm- : turns off minimal rebuild (rebuild all)
+-GR- : turn down RTTI
+-EHa- : no exceptions (generates extrac stuff on the stack that we dont need)
+-Oi : enable intrinsics
+
+warnings:
+
+-WX : treat warnings as errors
+-W4 : warning level 4
+-wd4201 : non standard unnamed struct/union
+-wd4100 : formal parameter not used in func
+-wd4189 : local var init but not used
+
+debug info:
+
+-Zi : produce pdb
+or
+-Z7 : old pdb format, no more vc120.pdb also.
+
+-FC : full file path in diagnostic messages.
+
+-Fmwin32_handmade.map : generates a map file.
+
+
+BEFORE the lib, at the end:
+
+/link 
+
+-subsystem:windows,5.1 : build a win32 exe for WinXP
+-opt:ref : be aggressive, dont put anything in the exe if you dont need it.
+
+
+=> cl /MT /nologo /Gm- /GR- /EHa- /Oi /WX /W4 /wd4201 /wd4100 /wd4189 /Zi /FC /Fmwin32_handmade.map win32_handmade.cpp /link /opt:ref /subsystem:windows,5.1 user32.lib gdi32.lib
+
+
+Assert(!"message")

@@ -1,0 +1,2 @@
+- "make your code usable before you try to make it reusable"
+-> do not pack your code into reusable functions if there is not at least 2 places with the same context that must do the same thing.

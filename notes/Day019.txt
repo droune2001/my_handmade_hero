@@ -1,0 +1,6 @@
+struct toto {};
+toto my_variable = {}; // <- init all to 0
+toto my_variable = {1}; // <- init first to 1, all next to 0
+
+
+1:11:39

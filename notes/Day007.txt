@@ -1,0 +1,1 @@
+* in order to init DirectSound we need to have a window !

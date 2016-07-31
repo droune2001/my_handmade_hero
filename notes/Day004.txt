@@ -1,0 +1,3 @@
+compiler flag /FC -> full file path on error
+
+timecode: 39:50

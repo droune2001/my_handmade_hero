@@ -1,0 +1,1 @@
+ALT+click in watch window to drag "address" to watch or memory.

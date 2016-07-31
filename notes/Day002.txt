@@ -1,0 +1,6 @@
+* WNDCLASS
+* WNDPROC
+* switch MSG
+* Translate/Dispatch
+* BeginPaint/EndPaint
+* PatBlt

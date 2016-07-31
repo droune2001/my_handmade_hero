@@ -1,0 +1,66 @@
+(*pound if* *pound define*)
+
+* Platform abstraction: 
+
+- methode 1: #ifdef WIN32 #elif LINUX #elif...
+	* DO NOT USE THIS METHOD *
+	- c'est relou pour implementer les autres plateformes, faut chercher les #ifdef
+	- le code devient rapidement illisible.
+	- workflow is not the same between platforms !! you cant do that.
+	
+- methode 2:
+	- header commun
+	- cpps differents par plateforme.
+	- platform code begins, 
+		and calls gameplay code, 
+			which calls common header functions, 
+				which calls plateform specific code
+
+- 1 translation unit. #include CPPs in one file. 
+
+
+
+* Using platform abstration:
+
+- Method 1: Virtualize/Abstract the platform.
+
+in WinMain, 
+	you call GameMain()
+		call PlatformLayerOpenWindow()
+		call PlatformLayerOpenSoundDevice()
+
+platform.h
+
+struct plateform_window; // just dont define it yet.
+plateform_window *PlatformLayerOpenWindow();
+void PlatformLayerShutdown( platform_window * );
+
+win32_platform.cpp
+
+struct platform_window
+{
+	HWND wnd;
+}
+
+linux_platform.cpp
+
+struct platform_window
+{
+	XDisplay *toto;
+}
+
+- Method 2: instead of the platform being a list of services for the Gameplay
+we prefer thinking of the Game as services to the platform code, providing 
+graphics and sound data.
+
+Each platform has a really specific way of being well written, 
+complex logic and order of operation that cant be abstracted away easily. 
+
+The game code, however, is unique, and dont need to call the OS often (open file).
+the platform abstraction becomes really thin, the game won't handle windows.
+
+
+
+
+
+

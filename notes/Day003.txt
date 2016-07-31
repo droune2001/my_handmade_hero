@@ -1,0 +1,11 @@
+- WM_CLOSE -> PostQuitMessage(0)
+- Don't give a shit about releasing windows and other resources at the end of the program. 
+  It is faster to just quit when the user wants to quit. 
+  Windows will clean up the mess anyway and do it much faster.
+- to help make the difference between in-function static and global static, and non-extern functions
+#define internal static
+#define local_persist static
+#define global_variable static
+- while(running) instead of for(;;), and running = false on WM_CLOSe and WM_DESTROY
+- name Win32XXXX your functions that can collide with windows functions.
+
