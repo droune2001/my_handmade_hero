@@ -1,0 +1,11 @@
+use FindFirstFile to get the timestamp of the file.
+
+LoadGameCode: copy source dll to a temp name, then load the temp.
+every loop, get timestamp of source file, check it is different than the last one, 
+using ::CompareFileTime( &t1, &t2 ) != 0
+if so, UnloadGameCode (Tempfile), then LoadGameCode (and store file time)
+
+Visual Studio: auto reload of files without complaining about files modified outside
+-> Tools -> Options ->Environment -> Documents -> check "Auto_load changes"
+
+stopped at 36:44
