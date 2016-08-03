@@ -120,11 +120,10 @@ Win32GetLastWriteTime( char *Filename )
 }
 
 internal win32_game_code
-Win32LoadGameCode( char *SourceDLLName )
+Win32LoadGameCode( char *SourceDLLName, char *TempDLLName )
 {
 	win32_game_code Result = {};
 
-	char *TempDLLName = "handmade_temp.dll";
 	Result.DLLLastWriteTime = Win32GetLastWriteTime( SourceDLLName );
 	::CopyFile( SourceDLLName, TempDLLName, FALSE );
 	Result.GameCodeDLL = ::LoadLibraryA( TempDLLName );
@@ -660,11 +659,48 @@ Win32DebugSyncDisplay(	win32_offscreen_buffer *BackBuffer,
 	}
 }
 
+internal void
+CatStrings( size_t SourceACount, char *SourceA,
+			size_t SourceBCount, char *SourceB,
+			size_t DestCount, char *Dest )
+{
+	for ( size_t Index = 0; Index < SourceACount; ++Index  ) {
+		*Dest++ = *SourceA++;
+	}
+	for ( size_t Index = 0; Index < SourceBCount; ++Index ) {
+		*Dest++ = *SourceB++;
+	}
+	*Dest++ = 0;
+}
+
 int CALLBACK WinMain(	HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR     lpCmdLine,
                      int       nCmdShow )
 {
+	// NOTE(nfauvet): Never use MAX_PATH in code that is user-facing, because it
+	// can be dnagerous and lead to bad results.
+	char EXEFileName[MAX_PATH];
+	DWORD SizeOfFilename = GetModuleFileNameA( 0, EXEFileName, sizeof( EXEFileName ) );
+	char *OnePastLastSlash = EXEFileName;
+	for ( char *Scan = EXEFileName; *Scan; ++Scan ) {
+		if ( *Scan == '\\' ) {
+			OnePastLastSlash = Scan + 1;
+		}
+	}
+
+	char SourceGameCodeDLLFilename[] = "handmade.dll";
+	char SourceGameCodeDLLFullPath[MAX_PATH];
+	CatStrings( OnePastLastSlash - EXEFileName, EXEFileName,
+				sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename,
+				sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath );
+
+	char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+	char TempGameCodeDLLFullPath[MAX_PATH];
+	CatStrings( OnePastLastSlash - EXEFileName, EXEFileName,
+				sizeof( TempGameCodeDLLFilename ) - 1, TempGameCodeDLLFilename,
+				sizeof( TempGameCodeDLLFullPath ), TempGameCodeDLLFullPath );
+
 	LARGE_INTEGER PerfCounterFrequencyResult;
 	::QueryPerformanceFrequency(&PerfCounterFrequencyResult);
 	GlobalPerfCounterFrequency = PerfCounterFrequencyResult.QuadPart;
@@ -778,19 +814,18 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 				DWORD AudioLatencyBytes = 0;
 				real32 AudioLatencySeconds = 0;
 				
-				char *SourceDLLName = "handmade.dll";
-				win32_game_code Game = Win32LoadGameCode( SourceDLLName );
+				win32_game_code Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath );
 				uint32 LoadCounter = 0;
 
                 GlobalRunning = true;
                 while ( GlobalRunning )
                 {
-					FILETIME NewDLLWriteTime = Win32GetLastWriteTime( SourceDLLName );
+					FILETIME NewDLLWriteTime = Win32GetLastWriteTime( SourceGameCodeDLLFullPath );
 
 					if ( ::CompareFileTime( &NewDLLWriteTime, &Game.DLLLastWriteTime ) != 0 )
 					{
 						Win32UnloadGameCode( &Game );
-						Game = Win32LoadGameCode( SourceDLLName );
+						Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath );
 						LoadCounter = 0;
 					}
 
@@ -1003,9 +1038,11 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 							AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
 							AudioLatencySeconds = ((real32)AudioLatencyBytes / (real32)SoundOutput.BytesPerSample) / (real32)SoundOutput.SamplesPerSecond;
 
+#if 0
 							char text_buffer[512];
 							_snprintf_s(text_buffer, sizeof(text_buffer), "BTL: %u PC: %u WC: %u DELTA: %u (%.3fs)\n", ByteToLock, PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
 							::OutputDebugStringA(text_buffer);
+#endif
 #endif
 							// Actually write the sound samples to the sound card.
 							Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);

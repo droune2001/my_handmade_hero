@@ -76,6 +76,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Manual|x64'">
     <OutDir>$(SolutionDir)..\..\data\</OutDir>
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>win32_handmade</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
