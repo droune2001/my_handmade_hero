@@ -190,6 +190,9 @@ struct game_state
 	int YOffset;
 
 	real32 tSine;
+
+	int PlayerX;
+	int PlayerY;
 };
 
 #endif // HANDMADE_H

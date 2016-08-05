@@ -39,6 +39,12 @@ RenderWeirdGradient( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
 	}
 }
 
+internal void
+RenderPlayer( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
+{
+
+}
+
 extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 {
 	// check if we did not forget to update the union "array of buttons" / "struct with every buttons"
@@ -62,6 +68,9 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		GameState->tSine = 0.0f;
 		GameState->XOffset = 0;
 		GameState->YOffset = 0;
+
+		GameState->PlayerX = 100;
+		GameState->PlayerY = 100;
 
 		Memory->IsInitialized = true;
 	}
@@ -99,6 +108,9 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
             if ( Controller->ActionDown.EndedDown ) { 
                 GameState->XOffset += 1;
             }
+
+			GameState->PlayerX += (int)( 4.0f * Controller->StickAverageX );
+			GameState->PlayerY += (int)( 4.0f * Controller->StickAverageY );
         }
     }
 	
