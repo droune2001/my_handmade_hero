@@ -9,8 +9,12 @@ GameOutputSound( game_state *GameState, game_sound_output_buffer *pSoundBuffer, 
 
 	int16 *SampleOut = pSoundBuffer->Samples;
 	for ( int SampleIndex = 0; SampleIndex < pSoundBuffer->SampleCount; ++SampleIndex ) {
+#if 0
 		real32 SineValue = sinf( GameState->tSine );
 		int16 SampleValue = (int16)(SineValue * ToneVolume ); // scale sin
+#else
+		int16 SampleValue = 0; // be quiet!
+#endif
 		*SampleOut++ = SampleValue;
 		*SampleOut++ = SampleValue;
 		GameState->tSine += 2.0f * Pi32 * 1.0f / (real32)WavePeriod;
@@ -37,12 +41,32 @@ RenderWeirdGradient( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
 		}
 		Row += pBuffer->Pitch;
 	}
+
 }
 
 internal void
-RenderPlayer( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
-{
+RenderPlayer( game_offscreen_buffer *pBuffer, int PlayerX, int PlayerY )
+{	
+	int PlayerSize = 10;
 
+	if ( PlayerX < 0 ) { PlayerX = 0; }
+	if ( PlayerX > pBuffer->Width - PlayerSize - 1 ) { PlayerX = pBuffer->Width - PlayerSize - 1; }
+	if ( PlayerY < 0 ) { PlayerY = 0; }
+	if ( PlayerY > pBuffer->Height - PlayerSize - 1 ) { PlayerY = pBuffer->Height - PlayerSize - 1; }
+
+	int Color = 0xffffffff;
+	int Top = PlayerY;
+	int Bottom = PlayerY + 10;
+	for ( int X = PlayerX; X < PlayerX + 10; ++X ) {
+		uint8 *Pixel = (uint8*)pBuffer->Memory 
+			+ X * pBuffer->BytesPerPixel 
+			+ Top * pBuffer->Pitch;
+		for ( int Y = Top; Y < Bottom; ++Y )
+		{
+			*( (uint32*)Pixel ) = Color;
+			Pixel += pBuffer->Pitch;
+		}
+	}
 }
 
 extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
@@ -80,8 +104,12 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         if ( Controller->IsConnected ) {
             if ( Controller->IsAnalog ) {
                 GameState->ToneHz = 256 + (int)(128.0f * (Controller->StickAverageX));
+
                 GameState->XOffset += (int)(4.0f * Controller->StickAverageX);
                 GameState->YOffset -= (int)(4.0f * Controller->StickAverageY);
+
+				GameState->PlayerX += (int)( 4.0f * Controller->StickAverageX );
+				GameState->PlayerY -= (int)( 4.0f * Controller->StickAverageY + sinf( GameState->tJump ) );
             } else {
                 
 				int ToneHz = GameState->ToneHz;
@@ -99,22 +127,31 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				}
 				GameState->ToneHz = ToneHz;
 
-                GameState->XOffset += 4 * ( Controller->MoveLeft.EndedDown ? 1 : 0 );
-                GameState->XOffset -= 4 * ( Controller->MoveRight.EndedDown ? 1 : 0 );
-                GameState->YOffset -= 4 * ( Controller->MoveUp.EndedDown ? 1 : 0 );
-                GameState->YOffset += 4 * ( Controller->MoveDown.EndedDown ? 1 : 0 );
+                //GameState->XOffset += 4 * ( Controller->MoveLeft.EndedDown ? 1 : 0 );
+                //GameState->XOffset -= 4 * ( Controller->MoveRight.EndedDown ? 1 : 0 );
+                //GameState->YOffset -= 4 * ( Controller->MoveUp.EndedDown ? 1 : 0 );
+                //GameState->YOffset += 4 * ( Controller->MoveDown.EndedDown ? 1 : 0 );
+
+				GameState->PlayerX += (int)( 10 * ( Controller->MoveRight.EndedDown ? 1 : 0 ) );
+				GameState->PlayerX += (int)( 10 * ( Controller->MoveLeft.EndedDown ? -1 : 0 ) );
+				GameState->PlayerY += (int)( 10 * ( Controller->MoveUp.EndedDown ? -1 : 0 ) );
+				GameState->PlayerY += (int)( 10 * ( Controller->MoveDown.EndedDown ? 1 : 0 ) );
+
+				// jump
+				if ( GameState->tJump > 0.0f ) {
+					GameState->PlayerY += (int)( 10.0f * sinf( Pi32 * GameState->tJump ) );
+				}
             }
             
             if ( Controller->ActionDown.EndedDown ) { 
-                GameState->XOffset += 1;
+				GameState->tJump = 2.0f;
             }
-
-			GameState->PlayerX += (int)( 4.0f * Controller->StickAverageX );
-			GameState->PlayerY += (int)( 4.0f * Controller->StickAverageY );
+			GameState->tJump -= 2.0f * 0.033f;
         }
     }
 	
 	RenderWeirdGradient( pBuffer, GameState->XOffset, GameState->YOffset );
+	RenderPlayer( pBuffer, GameState->PlayerX, GameState->PlayerY );
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES( GameGetSoundSamples )

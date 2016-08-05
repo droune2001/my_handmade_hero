@@ -15,7 +15,7 @@ set timestamp=%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:
 cl  %CommonCompilerFlags% ..\code\handmade.cpp /Fmhandmade.map /LD /link /incremental:no /opt:ref /PDB:handmade_%timestamp%.pdb /EXPORT:GameUpdateAndRender /EXPORT:GameGetSoundSamples
 cl  %CommonCompilerFlags% ..\code\win32_handmade.cpp /Fmwin32_handmade.map /link %CommonLinkerFlags% 
 
-xcopy win32_handmade.exe ..\data\ /Y
-xcopy handmade.dll ..\data\ /Y
+REM xcopy win32_handmade.exe ..\data\ /Y
+REM xcopy handmade.dll ..\data\ /Y
 
 popd

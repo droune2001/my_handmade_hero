@@ -74,7 +74,7 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Manual|x64'">
-    <OutDir>$(SolutionDir)..\..\data\</OutDir>
+    <OutDir>$(SolutionDir)..\..\build\</OutDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>win32_handmade</TargetName>
   </PropertyGroup>
