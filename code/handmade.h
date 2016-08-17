@@ -56,6 +56,17 @@ inline uint32 SafeTruncateSize32( uint64 Value )
 
 #define ArrayCount(tab) (sizeof(tab) / sizeof((tab)[0]))
 
+// * passed through each execution chain in the game
+// * when you use operating system services, you are going
+//   to need one of these thread_context (not on windows).
+// * passed to platform calls.
+// * Because not all platforms give you good information on the current thread
+//   when doing multi-threading.
+struct thread_context
+{
+	int Placeholder;
+};
+
 // -----------------------------------------------------
 // Services the platform layer provides to the game.
 #if HANDMADE_INTERNAL
@@ -69,13 +80,13 @@ struct debug_read_file_result
 	void *Contents;
 };
 
-#define DEBUG_PLATFORM_FREE_FILE_MEMORY( name ) void name( void *Memory )
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY( name ) void name( thread_context *Thread, void *Memory )
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY( debug_platform_free_file_memory );
 
-#define DEBUG_PLATFORM_READ_ENTIRE_FILE( name ) debug_read_file_result name( char *Filename )
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE( name ) debug_read_file_result name( thread_context *Thread, char *Filename )
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE( debug_platform_read_entire_file );
 
-#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE( name ) bool32 name( char *Filename, uint32 MemorySize, void *Memory )
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE( name ) bool32 name( thread_context *Thread, char *Filename, uint32 MemorySize, void *Memory )
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE( debug_platform_write_entire_file );
 
 #endif
@@ -143,6 +154,11 @@ struct game_controller_input
 
 struct game_input 
 {
+	// for debugging purposes
+	game_button_state MouseButtons[5];
+	int32 MouseX, MouseY, MouseZ;
+
+	// TODO(nfauvet): insert clock values here.
 	game_controller_input Controllers[5]; // 4 manettes et 1 keyboard
 };
 
@@ -168,10 +184,10 @@ struct game_memory
 	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 };
 
-#define GAME_UPDATE_AND_RENDER( name ) void name( game_memory *Memory, game_input *Input, game_offscreen_buffer *pBuffer )
+#define GAME_UPDATE_AND_RENDER( name ) void name( thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *pBuffer )
 typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
 
-#define GAME_GET_SOUND_SAMPLES( name ) void name( game_memory *Memory, game_sound_output_buffer *pSoundBuffer )
+#define GAME_GET_SOUND_SAMPLES( name ) void name( thread_context *Thread, game_memory *Memory, game_sound_output_buffer *pSoundBuffer )
 typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 
 //
