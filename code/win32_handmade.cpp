@@ -868,7 +868,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 	// desired windows scheduler granularity to 1 ms
 
     Win32LoadXInput();
-    Win32ResizeDIBSection( &GlobalBackBuffer, 1280, 720 );
+    Win32ResizeDIBSection( &GlobalBackBuffer, 960, 540 );
    
     WNDCLASSA WindowClass = {};
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW; // | CS_OWNDC;
@@ -885,8 +885,8 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
+            1000, //CW_USEDEFAULT,
+            600, //CW_USEDEFAULT,
             0,
             0,
             hInstance,
@@ -1005,7 +1005,8 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
                 game_input Input[2] = {};
                 game_input *NewInput = &Input[0];
                 game_input *OldInput = &Input[1];
-                
+				NewInput->SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;
+
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
 				LARGE_INTEGER FlipWallClock = Win32GetWallClock();
                 uint64 LastCycleCount = __rdtsc();

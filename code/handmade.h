@@ -158,7 +158,8 @@ struct game_input
 	game_button_state MouseButtons[5];
 	int32 MouseX, MouseY, MouseZ;
 
-	// TODO(nfauvet): insert clock values here.
+	real32 SecondsToAdvanceOverUpdate;
+
 	game_controller_input Controllers[5]; // 4 manettes et 1 keyboard
 };
 
@@ -195,15 +196,7 @@ typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 //
 struct game_state
 {
-	int ToneHz;
-	int XOffset;
-	int YOffset;
 
-	real32 tSine;
-
-	real32 tJump;
-	int PlayerX;
-	int PlayerY;
 };
 
 #endif // HANDMADE_H

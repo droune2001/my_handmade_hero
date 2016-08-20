@@ -110,7 +110,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Manual|x64'">
     <ClCompile>
-      <AdditionalOptions>-EHa- /wd4201 /wd4100 /wd4189</AdditionalOptions>
+      <AdditionalOptions>-EHa- /wd4201 /wd4100 /wd4189 /wd4505</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>

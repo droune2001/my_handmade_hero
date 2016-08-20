@@ -167,7 +167,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <UseFullPaths>true</UseFullPaths>
-      <AdditionalOptions>-EHa- /wd4201 /wd4100 /wd4189</AdditionalOptions>
+      <AdditionalOptions>-EHa- /wd4201 /wd4100 /wd4189  /wd4505</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
