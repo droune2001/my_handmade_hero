@@ -1,0 +1,4 @@
+Arrondi(x) = truncate(x + 0.5)
+si x = 0.9, x + 0.5 = 1.4, trunc(x) = 1
+si x = 1.1, x + 0.5 = 1.6, trunc(x) = 1
+cast to int => truncate
