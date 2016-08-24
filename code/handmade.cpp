@@ -60,20 +60,17 @@ DrawRectangle(	game_offscreen_buffer *Buffer,
 	// BIT PATTERN: 0x AA RR GG BB
 	uint32 Color =	(RoundReal32ToUInt32( R * 255.0f ) << 16) |
 					(RoundReal32ToUInt32( G * 255.0f ) << 8 ) |
-					RoundReal32ToUInt32( B * 255.0f );
+					 RoundReal32ToUInt32( B * 255.0f );
 
 	// Starting pointer. Top-left of rectangle
 	uint8 *Row = (uint8*)Buffer->Memory
 		+ MinY * Buffer->Pitch
 		+ MinX * Buffer->BytesPerPixel;
 
-	for ( int Y = MinY; Y < MaxY; ++Y ) 
-	{	
+	for ( int Y = MinY; Y < MaxY; ++Y ) {	
 		uint32 *Pixel = (uint32*)Row;
-		for ( int X = MinX; X < MaxX; ++X )
-		{
+		for ( int X = MinX; X < MaxX; ++X ) {
 			*Pixel++ = Color;
-			
 		}
 		Row += Buffer->Pitch;
 	}
@@ -122,7 +119,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				if ( Controller->MoveLeft.EndedDown ){
 					dPlayerX = -1.0f;
 				}
-				real32 Speed = 100.0f;
+				real32 Speed = 64.0f;
 				GameState->PlayerX += Input->dtForFrame * Speed * dPlayerX;
 				GameState->PlayerY += Input->dtForFrame * Speed * dPlayerY;
 			}
