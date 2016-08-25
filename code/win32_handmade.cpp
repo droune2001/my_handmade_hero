@@ -361,15 +361,25 @@ internal void Win32ResizeDIBSection( win32_offscreen_buffer *Buffer, int width, 
 }
 
 internal void Win32CopyBufferToWindow( HDC dc, int client_width, int client_height, 
-									   win32_offscreen_buffer *pBuffer )
+									   win32_offscreen_buffer *Buffer )
 {
+	int OffsetX = 10;
+	int OffsetY = 10;
+
+	// Clear the back in black
+	::PatBlt( dc, 0, 0, client_width, OffsetY, BLACKNESS ); // TOP
+	::PatBlt( dc, 0, OffsetY + Buffer->Height, client_width, client_width, BLACKNESS ); // BOTTOM
+	::PatBlt( dc, 0, 0, OffsetX, client_height, BLACKNESS ); // LEFT
+	::PatBlt( dc, OffsetX + Buffer->Width, 0, client_width, client_height, BLACKNESS ); // RIGHT
+
+
 	// Don't stretch. Want to see each and every pixel while learning
 	// how to do a renderer. We could introduce artifacts with stretching.
 	::StretchDIBits( dc,
-		0, 0, pBuffer->Width, pBuffer->Height, // FROM
-		0, 0, pBuffer->Width, pBuffer->Height, // TO
-		pBuffer->Memory,
-		&pBuffer->Info,
+		OffsetX, OffsetY, Buffer->Width, Buffer->Height, // FROM
+		0, 0, Buffer->Width, Buffer->Height, // TO
+		Buffer->Memory,
+		&Buffer->Info,
 		DIB_RGB_COLORS, // or DIB_PAL_COLORS for palette
 		SRCCOPY );
 }
@@ -1344,7 +1354,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 						NewInput = OldInput;
 						OldInput = tmp;
 
-#if 1
+#if 0
 						uint64 EndCycleCount = __rdtsc();
 						uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 						LastCycleCount = EndCycleCount;
