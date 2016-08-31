@@ -53,12 +53,17 @@ inline game_controller_input *GetController( game_input *Input, int ControllerIn
 
 struct canonical_position
 {
+	// TODO(nfauvet): pack the TileMapX/Y and TileX/Y into one uint
+	// => virtual system into a tile store
+	// => 28bits for chunks index (page)
+	// => 4bits for chunks inside index
 	int32 TileMapX; // which tilemap in the world
 	int32 TileMapY;
 
 	int32 TileX; // which tile index in the tilemap
 	int32 TileY;
 
+	// TODO(nfauvet): converts these to math friendly resolution independant world units.
 	real32 X; // position inside a tile, relative to top left corner.
 	real32 Y;
 };
@@ -80,13 +85,14 @@ struct tile_map
 
 struct world
 {
+	real32 TileSideInMeters;
+	int32 TileSideInPixels;
+
 	int32 CountX;
 	int32 CountY;
 
 	float UpperLeftX;
 	float UpperLeftY;
-	uint32 TileWidth;
-	uint32 TileHeight;
 
 	int32 TileMapCountX;
 	int32 TileMapCountY;

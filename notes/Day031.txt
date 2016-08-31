@@ -1,0 +1,3 @@
+/fp:math turns floorf into actual code when optimizing
+
+intel intrinsics guide = cool doc of all intrinsics.

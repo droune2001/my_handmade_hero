@@ -1,4 +1,5 @@
 #include "handmade.h"
+#include "handmade_intrinsics.h"
 
 internal void
 GameOutputSound( game_state *GameState, game_sound_output_buffer *pSoundBuffer, int ToneHz )
@@ -25,40 +26,6 @@ GameOutputSound( game_state *GameState, game_sound_output_buffer *pSoundBuffer, 
 		}
 #endif
 	}
-}
-
-inline internal
-int32 RoundReal32ToInt32( real32 Real32 )
-{
-	int32 Result = (int32)( Real32 + 0.5f );
-	return Result;
-}
-
-inline internal
-uint32 RoundReal32ToUInt32( real32 Real32 )
-{
-	int32 Result = (uint32)( Real32 + 0.5f );
-	return Result;
-}
-
-inline internal
-int32 FloorReal32ToInt32( real32 Real32 )
-{
-	if ( Real32 < 0.0f )
-	{
-		return (int32)( Real32 - 1.0f );
-	}
-	else
-	{
-		return (int32)( Real32 );
-	}
-}
-
-inline internal
-int32 TruncateReal32ToInt32( real32 Real32 )
-{
-	int32 Result = (int32)Real32;
-	return Result;
 }
 
 internal void
@@ -150,17 +117,17 @@ GetCanonicalPosition( world *World, raw_position Pos )
 	real32 X = Pos.X - World->UpperLeftX; // relative to the tilemap.
 	real32 Y = Pos.Y - World->UpperLeftY; // relative to the tilemap.
 
-	Result.TileX = FloorReal32ToInt32( X / World->TileWidth );
-	Result.TileY = FloorReal32ToInt32( Y / World->TileHeight );
+	Result.TileX = FloorReal32ToInt32( X / World->TileSideInPixels );
+	Result.TileY = FloorReal32ToInt32( Y / World->TileSideInPixels );
 
-	Result.X = X - ( (real32)Result.TileX * (real32)World->TileWidth ); // position inside the tile, relative to the top left corner
-	Result.Y = Y - ( (real32)Result.TileY * (real32)World->TileHeight );
+	Result.X = X - ( (real32)Result.TileX * (real32)World->TileSideInPixels ); // position inside the tile, relative to the top left corner
+	Result.Y = Y - ( (real32)Result.TileY * (real32)World->TileSideInPixels );
 
 	// Assert relative pos well within the bounds of a tile coordinates
 	Assert( Result.X >= 0 );
 	Assert( Result.Y >= 0 );
-	Assert( Result.X < World->TileWidth );
-	Assert( Result.Y < World->TileHeight );
+	Assert( Result.X < World->TileSideInPixels );
+	Assert( Result.Y < World->TileSideInPixels );
 
 	// wrap around, going left makes you enter right in the previous tilemap
 	if ( Result.TileX < 0 )
@@ -260,13 +227,15 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 	World.TileMapCountY = 2;
 	World.CountX = TILE_MAP_COUNT_X;
 	World.CountY = TILE_MAP_COUNT_Y;
-	World.TileWidth = 60;
-	World.TileHeight = 60;
-	World.UpperLeftX = -30.0f;
+
+	World.TileSideInMeters = 1.4f;
+	World.TileSideInPixels = 60; 
+
+	World.UpperLeftX = -World.TileSideInPixels / 2.0f;
 	World.UpperLeftY = 0.0f;
 
-	real32 PlayerWidth = 0.75f * World.TileWidth;
-	real32 PlayerHeight = (real32)World.TileHeight;
+	real32 PlayerWidth = 0.75f * World.TileSideInPixels;
+	real32 PlayerHeight = (real32)World.TileSideInPixels;
 
 	tile_map TileMaps[2][2];
 	TileMaps[0][0].Tiles = (uint32*)Tiles00;
@@ -330,8 +299,8 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 					GameState->PlayerTileMapX = CanPos.TileMapX;
 					GameState->PlayerTileMapY = CanPos.TileMapY;
 
-					GameState->PlayerX = World.UpperLeftX + World.TileWidth * CanPos.TileX + CanPos.X;
-					GameState->PlayerY = World.UpperLeftY + World.TileHeight * CanPos.TileY + CanPos.Y;
+					GameState->PlayerX = World.UpperLeftX + World.TileSideInPixels * CanPos.TileX + CanPos.X;
+					GameState->PlayerY = World.UpperLeftY + World.TileSideInPixels * CanPos.TileY + CanPos.Y;
 				}
 			}
         }
@@ -353,10 +322,10 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				Gray = 1.0f;
 			}
 			
-			real32 MinX = World.UpperLeftX + (real32)( Column * World.TileHeight );
-			real32 MinY = World.UpperLeftY + (real32)( Row * World.TileWidth );
-			real32 MaxX = MinX + World.TileWidth;
-			real32 MaxY = MinY + World.TileHeight;
+			real32 MinX = World.UpperLeftX + (real32)( Column * World.TileSideInPixels );
+			real32 MinY = World.UpperLeftY + (real32)( Row * World.TileSideInPixels );
+			real32 MaxX = MinX + World.TileSideInPixels;
+			real32 MaxY = MinY + World.TileSideInPixels;
 			DrawRectangle( pBuffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray );
 		}
 	}
