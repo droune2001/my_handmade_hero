@@ -685,15 +685,15 @@ internal void Win32ProcessPendingMessages( win32_state *Win32State, game_control
                 bool32 bIsDown = ( ( Message.lParam & ( 1 << 31 ) ) == 0 );
                 bool32 bAltKeyIsDown = ( Message.lParam & ( 1 << 29 ) );
                 if ( bIsDown != bWasDown ) {
-                    if ( VKCode == 'Z' ) {
+                    if ( VKCode == 'W' ) { // Z
                         Win32ProcessKeyboardMessage( &KeyboardController->MoveUp, bIsDown );
-                    } else if ( VKCode == 'Q' ) {
+                    } else if ( VKCode == 'A' ) { // Q
                         Win32ProcessKeyboardMessage( &KeyboardController->MoveLeft, bIsDown );
                     } else if ( VKCode == 'S' ) {
                         Win32ProcessKeyboardMessage( &KeyboardController->MoveDown, bIsDown );
                     } else if ( VKCode == 'D' ) {
                         Win32ProcessKeyboardMessage( &KeyboardController->MoveRight, bIsDown );
-                    } else if ( VKCode == 'A' ) {
+                    } else if ( VKCode == 'Q' ) { // A
                         Win32ProcessKeyboardMessage( &KeyboardController->LeftShoulder, bIsDown );
                     } else if ( VKCode == 'E' ) {
                         Win32ProcessKeyboardMessage( &KeyboardController->RightShoulder, bIsDown );

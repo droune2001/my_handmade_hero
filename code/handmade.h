@@ -51,54 +51,17 @@ inline game_controller_input *GetController( game_input *Input, int ControllerIn
 //
 //
 
-struct tile_chunk_position 
-{
-	uint32 TileChunkX;
-	uint32 TileChunkY;
-
-	uint32 RelTileX;
-	uint32 RelTileY;
-};
-
-struct world_position
-{
-	// TODO(nfauvet): pack the TileMapX/Y and TileX/Y into one uint
-	// => virtual system into a tile store
-	// => 28bits for chunks index (page)
-	// => 4bits for chunks inside index
-	uint32 AbsTileX;
-	uint32 AbsTileY;
-
-	// TODO(nfauvet): Center coordinates?
-	// TODO(nfauvet): rename "Offset"
-	real32 TileRelX; // position inside a tile, relative to top left corner, in meters
-	real32 TileRelY;
-};
-
-struct tile_chunk
-{
-	uint32 *Tiles;
-};
+#include "handmade_intrinsics.h"
+#include "handmade_tile.h"
 
 struct world
 {
-	uint32 ChunkShift;
-	uint32 ChunkMask;
-	uint32 ChunkDim;
-
-	real32 TileSideInMeters;
-	int32 TileSideInPixels;
-	real32 MetersToPixels;
-
-	int32 TileChunkCountX;
-	int32 TileChunkCountY;
-
-	tile_chunk *TileChunks;
+	tile_map *TileMap;
 };
 
 struct game_state
 {
-	world_position PlayerP;
+	tile_map_position PlayerP;
 #if 0
 	int32 PlayerTileMapX;
 	int32 PlayerTileMapY;
