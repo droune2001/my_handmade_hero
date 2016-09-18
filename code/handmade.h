@@ -54,6 +54,13 @@ inline game_controller_input *GetController( game_input *Input, int ControllerIn
 #include "handmade_intrinsics.h"
 #include "handmade_tile.h"
 
+struct memory_arena
+{
+	memory_index Size;
+	uint8 *Base;
+	memory_index Used;
+};
+
 struct world
 {
 	tile_map *TileMap;
@@ -61,14 +68,9 @@ struct world
 
 struct game_state
 {
+	memory_arena WorldArena;
+	world *World;
 	tile_map_position PlayerP;
-#if 0
-	int32 PlayerTileMapX;
-	int32 PlayerTileMapY;
-
-	real32 PlayerX;
-	real32 PlayerY;
-#endif
 };
 
 #endif // HANDMADE_H
