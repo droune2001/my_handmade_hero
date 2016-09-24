@@ -149,10 +149,10 @@ typedef struct game_memory
 	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 } game_memory;
 
-#define GAME_UPDATE_AND_RENDER( name ) void name( thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *pBuffer )
+#define GAME_UPDATE_AND_RENDER( name ) void name( thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer )
 typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
 
-#define GAME_GET_SOUND_SAMPLES( name ) void name( thread_context *Thread, game_memory *Memory, game_sound_output_buffer *pSoundBuffer )
+#define GAME_GET_SOUND_SAMPLES( name ) void name( thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer )
 typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 
 #ifdef __cplusplus

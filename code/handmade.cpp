@@ -3,14 +3,14 @@
 #include "handmade_random.h"
 
 internal void
-GameOutputSound( game_state *GameState, game_sound_output_buffer *pSoundBuffer, int ToneHz )
+GameOutputSound( game_state *GameState, game_sound_output_buffer *SoundBuffer, int ToneHz )
 {
 	local_persist real32 tSine;
 	int16 ToneVolume = 1000;
-	int WavePeriod = pSoundBuffer->SamplesPerSecond / ToneHz;
+	int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
 
-	int16 *SampleOut = pSoundBuffer->Samples;
-	for ( int SampleIndex = 0; SampleIndex < pSoundBuffer->SampleCount; ++SampleIndex ) {
+	int16 *SampleOut = SoundBuffer->Samples;
+	for ( int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex ) {
 #if 0
 		real32 SineValue = sinf( GameState->tSine );
 		int16 SampleValue = (int16)(SineValue * ToneVolume ); // scale sin
@@ -63,7 +63,40 @@ DrawRectangle(	game_offscreen_buffer *Buffer,
 		Row += Buffer->Pitch;
 	}
 }
-	
+
+#pragma pack( push, 1 )
+struct bitmap_header
+{
+	uint16 FileType;
+	uint32 FileSize;
+	uint16 R1;
+	uint16 R2;
+	uint32 Offset;
+
+	uint32 Size;
+	int32 Width;
+	int32 Height;
+	uint16 Planes;
+	uint16 BitPerPixel;
+};
+#pragma pack( pop )
+
+internal uint32 *
+DEBUGLoadBMP( thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *FileName )
+{
+	uint32 *Result = 0;
+
+	debug_read_file_result ReadResult = ReadEntireFile( Thread, FileName );
+	if ( ReadResult.ContentsSize != 0 ) 
+	{
+		bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
+		uint32 *Pixels = (uint32 *)((uint8 *)ReadResult.Contents + Header->Offset);
+		Result = Pixels;
+	}
+
+	return Result;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 {
 	// check if we did not forget to update the union "array of buttons" / "struct with every buttons"
@@ -80,10 +113,12 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
 	if ( !Memory->IsInitialized ) 
 	{
+		GameState->PixelPointer = DEBUGLoadBMP( Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp" );
+
 		GameState->PlayerP.AbsTileX = 8;
 		GameState->PlayerP.AbsTileY = 5;
-		GameState->PlayerP.TileRelX = 0.2f;
-		GameState->PlayerP.TileRelY = 0.3f;
+		GameState->PlayerP.OffsetX = 0.2f;
+		GameState->PlayerP.OffsetY = 0.3f;
 
 		// WorldArena comes just after the game_state chunk.
 		// Uses all the memory left.
@@ -134,31 +169,42 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 			Assert( RandomNumberIndex < ArrayCount( RandomNumberTable ) );
 			uint32 RandomChoice;
 			if ( DoorUp || DoorDown ) {
-				RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+				RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2; // roll only for top and right doors
 			} else {
-				RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
+				RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3; // roll for doors AND stairs
 			}
-			 
-			if ( RandomChoice == 0 ) {
-				DoorRight = true;
-			} else if ( RandomChoice == 1 ) {
-				DoorTop = true;
-			} else {
-				if ( AbsTileZ == 0 ) {
+			
+			bool32 CreatedZDoor = false;
+			// Select which kind of door the room is going to have
+			if ( RandomChoice == 2 )
+			{
+				CreatedZDoor = true;
+				if ( AbsTileZ == 0 ) 
+				{
 					DoorUp = true;
-				} else {
+				}
+				else 
+				{
 					DoorDown = true;
 				}
 			}
+			else if ( RandomChoice == 1 ) 
+			{
+				DoorTop = true;
+			} 
+			else 
+			{
+				DoorRight = true;
+			}
 
+			// Fill the room
 			for ( uint32 TileY = 0; TileY < TilesPerHeight; ++TileY ) {
 				for ( uint32 TileX = 0; TileX < TilesPerWidth; ++TileX ) {
 
 					uint32 AbsTileX = ScreenX * TilesPerWidth + TileX;
 					uint32 AbsTileY = ScreenY * TilesPerHeight + TileY;
 					
-
-					uint32 TileValue = 1; // default empty space
+					uint32 TileValue = 1; // default empty space ( door )
 					if ( ( TileX == 0 ) && ( !DoorLeft || ( TileY != ( TilesPerHeight / 2 ) ) ) )
 					{
 						TileValue = 2; // wall
@@ -179,6 +225,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 						TileValue = 2; // wall
 					}
 
+					// stairs
 					if ( ( TileX == 10 ) && ( TileY == 6 ) )
 					{
 						if ( DoorUp ) {
@@ -193,21 +240,23 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				}
 			}
 
+			// door to get back from where we came
 			DoorLeft = DoorRight;
 			DoorBottom = DoorTop;
 
-			if ( DoorUp ) {
-				DoorUp = false;
-				DoorDown = true;
-			} else if ( DoorDown ) {
-				DoorDown = false;
-				DoorUp = true;
-			} else {
+			// stair to get backm or reset for next random
+			if ( CreatedZDoor )
+			{
+				DoorUp = !DoorUp;
+				DoorDown = !DoorDown;
+			}
+			else
+			{
 				DoorDown = false;
 				DoorUp = false;
 			}
 
-
+			// reset for next random
 			DoorRight = false;
 			DoorTop = false;
 			
@@ -237,7 +286,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 	float MetersToPixels = (real32)TileSideInPixels / TileMap->TileSideInMeters;
 
 	float LowerLeftX = TileSideInPixels / 2.0f;
-	float LowerLeftY = (real32)pBuffer->Height;
+	float LowerLeftY = (real32)Buffer->Height;
 
     for ( int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex ) 
 	{
@@ -279,16 +328,16 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
 				// temporary position
 				tile_map_position NewPlayerP = GameState->PlayerP;
-				NewPlayerP.TileRelX += Input->dtForFrame * Speed * dPlayerX;
-				NewPlayerP.TileRelY += Input->dtForFrame * Speed * dPlayerY;
+				NewPlayerP.OffsetX += Input->dtForFrame * Speed * dPlayerX;
+				NewPlayerP.OffsetY += Input->dtForFrame * Speed * dPlayerY;
 				NewPlayerP = RecanonicalizePosition( TileMap, NewPlayerP );
 				 
 				tile_map_position PlayerLeft = NewPlayerP;
-				PlayerLeft.TileRelX -= 0.5f * PlayerWidth;
+				PlayerLeft.OffsetX -= 0.5f * PlayerWidth;
 				PlayerLeft = RecanonicalizePosition( TileMap, PlayerLeft );
 
 				tile_map_position PlayerRight = NewPlayerP;
-				PlayerRight.TileRelX += 0.5f * PlayerWidth;
+				PlayerRight.OffsetX += 0.5f * PlayerWidth;
 				PlayerRight = RecanonicalizePosition( TileMap, PlayerRight );
 
 				// test bottom left, middle and right points.
@@ -296,6 +345,19 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 					IsTileMapPointEmpty( TileMap, PlayerRight ) &&
 					IsTileMapPointEmpty( TileMap, NewPlayerP ) )
 				{
+					if ( !AreOnSameTile( &GameState->PlayerP, &NewPlayerP ) )
+					{
+						uint32 NewTileValue = GetTileValue( TileMap, NewPlayerP );
+						if ( NewTileValue == 3 )
+						{
+							++NewPlayerP.AbsTileZ;
+						}
+						else if ( NewTileValue == 4 )
+						{
+							--NewPlayerP.AbsTileZ;
+						}
+					}
+
 					// if position validated, commit it.
 					GameState->PlayerP = NewPlayerP;
 				}
@@ -308,11 +370,11 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
     }
 
 	// Clear screen
-	DrawRectangle( pBuffer, 0.0f, 0.0f, (real32)pBuffer->Width, (real32)pBuffer->Height, 1.0f, 0.0f, 1.0f );
+	DrawRectangle( Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 1.0f, 0.0f, 1.0f );
 
 	// Draw TileMap
-	real32 ScreenCenterX = 0.5f * (real32)pBuffer->Width;
-	real32 ScreenCenterY = 0.5f * (real32)pBuffer->Height;
+	real32 ScreenCenterX = 0.5f * (real32)Buffer->Width;
+	real32 ScreenCenterY = 0.5f * (real32)Buffer->Height;
 
 	for ( int32 RelRow = -10; RelRow < 10; ++RelRow ) {
 		for ( int32 RelColumn = -20; RelColumn < 20; ++RelColumn ) {
@@ -340,13 +402,13 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 					Gray = 0.0f;
 				}
 
-				real32 CenterX = ScreenCenterX - MetersToPixels * GameState->PlayerP.TileRelX + (real32)( RelColumn * TileSideInPixels ); // LowerLeftX +
-				real32 CenterY = ScreenCenterY + MetersToPixels * GameState->PlayerP.TileRelY - (real32)( RelRow * TileSideInPixels ); // LowerLeftY - 
+				real32 CenterX = ScreenCenterX - MetersToPixels * GameState->PlayerP.OffsetX + (real32)( RelColumn * TileSideInPixels ); // LowerLeftX +
+				real32 CenterY = ScreenCenterY + MetersToPixels * GameState->PlayerP.OffsetY - (real32)( RelRow * TileSideInPixels ); // LowerLeftY - 
 				real32 MinX = CenterX - 0.5f * TileSideInPixels;
 				real32 MinY = CenterY - 0.5f * TileSideInPixels;
 				real32 MaxX = CenterX + 0.5f * TileSideInPixels;
 				real32 MaxY = CenterY + 0.5f * TileSideInPixels;
-				DrawRectangle( pBuffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray );
+				DrawRectangle( Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray );
 			}
 		}
 	}
@@ -359,18 +421,32 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 	real32 PlayerLeft = ScreenCenterX - MetersToPixels * ( 0.5f * PlayerWidth );
 	real32 PlayerTop = ScreenCenterY - MetersToPixels * PlayerHeight;
 
-	DrawRectangle( pBuffer, 
+	DrawRectangle( Buffer, 
 		PlayerLeft, PlayerTop, 
 		PlayerLeft + MetersToPixels * PlayerWidth,
 		PlayerTop + MetersToPixels * PlayerHeight,
 		PlayerR, PlayerG, PlayerB );
+
+#if 0
+	// DEBUG	
+	uint32 *Source = GameState->PixelPointer;
+	uint32 *Dest = (uint32*)Buffer->Memory;
+
+	for ( int32 Y = 0; Y < Buffer->Height; ++Y ) 
+	{
+		for ( int32 X = 0; X < Buffer->Width; ++X )
+		{
+			*Dest++ = *Source++;
+		}
+	}
+#endif
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES( GameGetSoundSamples )
 {
 	game_state *GameState = (game_state *)Memory->PermanentStorage;
 
-	GameOutputSound( GameState, pSoundBuffer, 512 );
+	GameOutputSound( GameState, SoundBuffer, 512 );
 }
 
 
@@ -378,12 +454,12 @@ extern "C" GAME_GET_SOUND_SAMPLES( GameGetSoundSamples )
 // old stuff
 #if 0
 internal void
-RenderWeirdGradient( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
+RenderWeirdGradient( game_offscreen_buffer *Buffer, int XOffset, int YOffset )
 {
-	uint8 *Row = (uint8 *)pBuffer->Memory;
-	for ( int Y = 0; Y < pBuffer->Height; ++Y ) {
+	uint8 *Row = (uint8 *)Buffer->Memory;
+	for ( int Y = 0; Y < Buffer->Height; ++Y ) {
 		uint32 *Pixel = (uint32*)Row;
-		for ( int X = 0; X < pBuffer->Width; ++X ) {
+		for ( int X = 0; X < Buffer->Width; ++X ) {
 			// Memory:  BB GG RR xx
 			// Register xx RR GG BB (little endian)
 			uint8 RR = (uint8)( X + XOffset );
@@ -391,7 +467,7 @@ RenderWeirdGradient( game_offscreen_buffer *pBuffer, int XOffset, int YOffset )
 			//*Pixel++ = (RR << 16) | (GG << 8);
 			*Pixel++ = ( RR << 8 ) | ( GG << 16 );
 		}
-		Row += pBuffer->Pitch;
+		Row += Buffer->Pitch;
 	}
 
 }

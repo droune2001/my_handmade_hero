@@ -1,38 +1,4 @@
 
-
-inline void
-RecanonicalizeCoord( tile_map *TileMap, uint32 *Tile, real32 *TileRel )
-{
-	// overflow/underflow if TileRel goes < 0 or > TileSideInMeters
-	// Gives -1, 0 or 1, mostly. Could be 2, -3...
-	int32 Offset = RoundReal32ToInt32( *TileRel / TileMap->TileSideInMeters );
-	// for center based, we used round instead of floor
-
-	// NOTE(nfauvet): TileMap is toroidal. You exit on one side, your pop up on the other side.
-
-	// go to next Tile, or previous, or dont move.
-	*Tile += Offset;
-	// Take the remainder of the modified TileRel.
-	*TileRel -= (real32)Offset * TileMap->TileSideInMeters;
-
-	// Assert relative pos well within the bounds of a tile coordinates
-	Assert( *TileRel >= -0.5f * TileMap->TileSideInMeters );
-	Assert( *TileRel <= 0.5f * TileMap->TileSideInMeters );
-}
-
-// Takes a canonical which TileRelX and Y have been messed up with, 
-// and RE-canonicalize it.
-inline tile_map_position
-RecanonicalizePosition( tile_map *TileMap, tile_map_position Pos )
-{
-	tile_map_position Result = Pos;
-
-	RecanonicalizeCoord( TileMap, &Result.AbsTileX, &Result.TileRelX );
-	RecanonicalizeCoord( TileMap, &Result.AbsTileY, &Result.TileRelY );
-
-	return Result;
-}
-
 inline tile_chunk*
 GetTileChunk( tile_map *TileMap, uint32 TileChunkX, uint32 TileChunkY, uint32 TileChunkZ )
 {
@@ -115,12 +81,20 @@ GetTileValue( tile_map *TileMap, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTil
 	return TileChunkValue;
 }
 
+internal uint32
+GetTileValue( tile_map *TileMap, tile_map_position Pos )
+{
+	uint32 TileChunkValue = GetTileValue( TileMap, Pos.AbsTileX, Pos.AbsTileY, Pos.AbsTileZ );
+	return TileChunkValue;
+}
+
 internal bool32
 IsTileMapPointEmpty( tile_map *TileMap, tile_map_position Pos )
 {
-	uint32 TileChunkValue = GetTileValue( TileMap, Pos.AbsTileX, Pos.AbsTileY, Pos.AbsTileZ );
-	bool32 Empty = ( TileChunkValue == 1 ); // empty space
-
+	uint32 TileChunkValue = GetTileValue( TileMap, Pos );
+	bool32 Empty = (( TileChunkValue == 1 ) || // empty space
+					( TileChunkValue == 3 ) || // up stair
+					( TileChunkValue == 4 ) ); // down stair
 	return Empty;
 }
 
@@ -144,4 +118,53 @@ SetTileValue( memory_arena *Arena, tile_map *TileMap,
 	}
 
 	SetTileValue( TileMap, TileChunk, ChunkPos.RelTileX, ChunkPos.RelTileY, TileValue );
+}
+
+
+//
+//
+//
+
+inline void
+RecanonicalizeCoord( tile_map *TileMap, uint32 *Tile, real32 *TileRel )
+{
+	// overflow/underflow if TileRel goes < 0 or > TileSideInMeters
+	// Gives -1, 0 or 1, mostly. Could be 2, -3...
+	int32 Offset = RoundReal32ToInt32( *TileRel / TileMap->TileSideInMeters );
+	// for center based, we used round instead of floor
+
+	// NOTE(nfauvet): TileMap is toroidal. You exit on one side, your pop up on the other side.
+
+	// go to next Tile, or previous, or dont move.
+	*Tile += Offset;
+	// Take the remainder of the modified TileRel.
+	*TileRel -= (real32)Offset * TileMap->TileSideInMeters;
+
+	// Assert relative pos well within the bounds of a tile coordinates
+	Assert( *TileRel >= -0.5f * TileMap->TileSideInMeters );
+	Assert( *TileRel <= 0.5f * TileMap->TileSideInMeters );
+}
+
+// Takes a canonical which TileRelX and Y have been messed up with, 
+// and RE-canonicalize it.
+inline tile_map_position
+RecanonicalizePosition( tile_map *TileMap, tile_map_position Pos )
+{
+	tile_map_position Result = Pos;
+
+	RecanonicalizeCoord( TileMap, &Result.AbsTileX, &Result.OffsetX );
+	RecanonicalizeCoord( TileMap, &Result.AbsTileY, &Result.OffsetY );
+
+	return Result;
+}
+
+inline bool32
+AreOnSameTile( tile_map_position *A, tile_map_position *B )
+{
+	bool32 Result = ( 
+		( A->AbsTileX == B->AbsTileX ) &&
+		( A->AbsTileY == B->AbsTileY ) &&
+		( A->AbsTileZ == B->AbsTileZ ) );
+
+	return Result;
 }

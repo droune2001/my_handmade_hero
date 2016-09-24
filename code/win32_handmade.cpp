@@ -877,8 +877,8 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 	bool32 SleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
 	// desired windows scheduler granularity to 1 ms
 
-    Win32LoadXInput();
-    Win32ResizeDIBSection( &GlobalBackBuffer, 960, 540 );
+	Win32LoadXInput();
+    Win32ResizeDIBSection( &GlobalBackBuffer, 960, 540 ); // Half of HD 1080p
    
     WNDCLASSA WindowClass = {};
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW; // | CS_OWNDC;

@@ -12,9 +12,9 @@ struct tile_map_position
 	uint32 AbsTileY;
 	uint32 AbsTileZ;
 
-	// TODO(nfauvet): rename "Offset"
-	real32 TileRelX; // position inside a tile, relative to top left corner, in meters
-	real32 TileRelY;
+	// position inside a tile, relative to the center of the tile.
+	real32 OffsetX; 
+	real32 OffsetY;
 };
 
 struct tile_chunk_position
