@@ -1,6 +1,5 @@
 Test.out
 Manual/
-data/
 *.map
 
 ## Ignore Visual Studio temporary files, build results, and
