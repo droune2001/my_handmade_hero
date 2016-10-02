@@ -88,7 +88,27 @@ DrawBitmap( game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap, real32 RealX, 
 		uint32 *Dest = (uint32*)DestRow;
 		for ( int32 X = MinX; X < MaxX; ++X )
 		{
-			*Dest++ = *Source++;
+			real32 A = (real32)( ( *Source >> 24 ) & 0xFF ) / 255.0f;
+
+			real32 SR = (real32)( ( *Source >> 16 ) & 0xFF );
+			real32 SG = (real32)( ( *Source >> 8 ) & 0xFF );
+			real32 SB = (real32)( ( *Source >> 0 ) & 0xFF );
+
+			real32 DR = (real32)( ( *Dest >> 16 ) & 0xFF );
+			real32 DG = (real32)( ( *Dest >> 8 ) & 0xFF );
+			real32 DB = (real32)( ( *Dest >> 0 ) & 0xFF );
+
+			real32 R = ( 1.0f - A ) * DR + A * SR;
+			real32 G = ( 1.0f - A ) * DG + A * SG;
+			real32 B = ( 1.0f - A ) * DB + A * SB;
+
+			// truncate
+			*Dest = (((uint32)( R + 0.5f ) << 16 ) |
+					 ((uint32)( G + 0.5f ) << 8  ) |
+					 ((uint32)( B + 0.5f )) );
+			
+			++Dest;
+			++Source;
 		}
 
 		SourceRow -= Bitmap->Width; // bottom to top
@@ -129,31 +149,6 @@ struct bitmap_header
 };
 #pragma pack( pop )
 
-// TODO(nfauvet): move this to the intrinsics file
-struct bit_scan_result
-{
-	bool32 Found;
-	uint32 Index;
-};
-
-inline bit_scan_result
-FindLeastSignificantSetBit( uint32 Value )
-{
-	bit_scan_result Result = {};
-
-	for ( uint32 Test = 0; Test < 32; ++Test )
-	{
-		if ( Value & ( 1 << Test ) )
-		{
-			Result.Index = Test;
-			Result.Found = true;
-			break;
-		}
-	}
-
-	return Result;
-}
-
 internal loaded_bitmap
 DEBUGLoadBMP( thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *FileName )
 {
@@ -170,6 +165,8 @@ DEBUGLoadBMP( thread_context *Thread, debug_platform_read_entire_file *ReadEntir
 		Result.Pixels = Pixels;
 		Result.Width = Header->Width;
 		Result.Height = Header->Height;
+
+		Assert( Header->Compression == 3 );
 
 		uint32 RedMask = Header->RedMask;
 		uint32 GreenMask = Header->GreenMask;
@@ -533,13 +530,13 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 	real32 PlayerLeft = ScreenCenterX - MetersToPixels * ( 0.5f * PlayerWidth );
 	real32 PlayerTop = ScreenCenterY - MetersToPixels * PlayerHeight;
 
-	DrawBitmap( Buffer, &GameState->HeroHead, PlayerLeft, PlayerTop );
+	DrawRectangle( Buffer, 
+		PlayerLeft, PlayerTop, 
+		PlayerLeft + MetersToPixels * PlayerWidth,
+		PlayerTop + MetersToPixels * PlayerHeight,
+		PlayerR, PlayerG, PlayerB );
 
-	//DrawRectangle( Buffer, 
-	//	PlayerLeft, PlayerTop, 
-	//	PlayerLeft + MetersToPixels * PlayerWidth,
-	//	PlayerTop + MetersToPixels * PlayerHeight,
-	//	PlayerR, PlayerG, PlayerB );
+	DrawBitmap( Buffer, &GameState->HeroHead, PlayerLeft, PlayerTop );
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES( GameGetSoundSamples )
