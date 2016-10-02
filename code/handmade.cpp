@@ -129,6 +129,31 @@ struct bitmap_header
 };
 #pragma pack( pop )
 
+// TODO(nfauvet): move this to the intrinsics file
+struct bit_scan_result
+{
+	bool32 Found;
+	uint32 Index;
+};
+
+inline bit_scan_result
+FindLeastSignificantSetBit( uint32 Value )
+{
+	bit_scan_result Result = {};
+
+	for ( uint32 Test = 0; Test < 32; ++Test )
+	{
+		if ( Value & ( 1 << Test ) )
+		{
+			Result.Index = Test;
+			Result.Found = true;
+			break;
+		}
+	}
+
+	return Result;
+}
+
 internal loaded_bitmap
 DEBUGLoadBMP( thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *FileName )
 {
@@ -138,26 +163,43 @@ DEBUGLoadBMP( thread_context *Thread, debug_platform_read_entire_file *ReadEntir
 	// so in memory BGRA
 
 	debug_read_file_result ReadResult = ReadEntireFile( Thread, FileName );
-	if ( ReadResult.ContentsSize != 0 ) 
+	if ( ReadResult.ContentsSize != 0 )
 	{
 		bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
-		uint32 *Pixels = (uint32 *)((uint8 *)ReadResult.Contents + Header->Offset);
+		uint32 *Pixels = (uint32 *)( (uint8 *)ReadResult.Contents + Header->Offset );
 		Result.Pixels = Pixels;
 		Result.Width = Header->Width;
 		Result.Height = Header->Height;
-#if 0
-		// 0xRGBA -> 0xARGB
-		// Mais avec mon asset de test ca fait 0xAARRGGBB -> 0xBB AA RR GG, lol.
+
+		uint32 RedMask = Header->RedMask;
+		uint32 GreenMask = Header->GreenMask;
+		uint32 BlueMask = Header->BlueMask;
+		uint32 AlphaMask = ~( RedMask | GreenMask | BlueMask );
+
+		bit_scan_result RedShift = FindLeastSignificantSetBit( RedMask );
+		bit_scan_result GreenShift = FindLeastSignificantSetBit( GreenMask );
+		bit_scan_result BlueShift = FindLeastSignificantSetBit( BlueMask );
+		bit_scan_result AlphaShift = FindLeastSignificantSetBit( AlphaMask );
+		
+		Assert( RedShift.Found );
+		Assert( GreenShift.Found );
+		Assert( BlueShift.Found );
+		Assert( AlphaShift.Found );
+
+		// We want 0xARGB
 		uint32 *SourceDest = Pixels;
 		for ( int32 Y = 0; Y < Header->Height; ++Y )
 		{
 			for ( int32 X = 0; X < Header->Width; ++X )
 			{
-				*SourceDest = ( *SourceDest >> 8 ) | ( *SourceDest << 24 );
-				++SourceDest;
+				uint32 C = *SourceDest;
+				*SourceDest++ = ((( C >> AlphaShift.Index ) & 0xFF ) << 24 ) |
+								((( C >> RedShift.Index ) & 0xFF ) << 16 ) |
+								((( C >> GreenShift.Index ) & 0xFF ) << 8 ) |
+								((( C >> BlueShift.Index ) & 0xFF ) );
 			}
 		}
-#endif
+
 	}
 
 	return Result;
