@@ -1,6 +1,9 @@
 /*
 	TODO(nfauvet):
 
+	* Fullscreen support
+	* WM_SETCURSOR (cursor visibility)
+
 	* Saved game locations
 	* Getting a handle to our own executable file
 	* Asset loading path
@@ -8,8 +11,6 @@
 	* Raw Input (multiple keyboards)
 	* Sleep/timeBeginPeriod
 	* ClipCursor() for multimonitor support
-	* Fullscreen support
-	* WM_SETCURSOR (cursor visibility)
 	* QueryCancelAutoplay
 	* WM_ACTIVATEAPP (for when we are not the active application)
 	* Blit seed improvement (BitBlt)
@@ -32,8 +33,7 @@ global_variable bool32 GlobalPause = false;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 global_variable LPDIRECTSOUNDBUFFER pGlobalSecondaryBuffer;
 global_variable int64 GlobalPerfCounterFrequency;
-
-
+global_variable HCURSOR DEBUGlobalCursor;
 
 internal void
 CatStrings( size_t SourceACount, char *SourceA,
@@ -397,6 +397,12 @@ LRESULT CALLBACK Win32MainWindowCallback(	HWND   hwnd,
 
 	switch ( uMsg )
 	{
+		case WM_SETCURSOR:
+		{
+			::SetCursor( DEBUGlobalCursor );
+			//::ShowCursor( TRUE );
+		} break;
+
 		case WM_SIZE:
 		{
 		} break;
@@ -887,11 +893,13 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 	Win32LoadXInput();
     Win32ResizeDIBSection( &GlobalBackBuffer, 960, 540 ); // Half of HD 1080p
    
+	DEBUGlobalCursor = ::LoadCursorA( NULL, IDC_CROSS );
+
     WNDCLASSA WindowClass = {};
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW; // | CS_OWNDC;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = hInstance;
-    //WindowClass.hIcon = ;
+	//WindowClass.hIcon = ;
     WindowClass.lpszClassName = "HandmadeHeroWindowClass";
    
     if ( RegisterClassA( &WindowClass ) ) {
@@ -933,8 +941,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
             SoundOutput.RunningSampleIndex = 0;
             SoundOutput.BytesPerSample = sizeof( int16 ) * 2; // [LEFT  RIGHT] LEFT RIGHT LEFT RIGHT
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
-            SoundOutput.tSine = 0.0f;
-			// TODO(nfauvet): compute the variance to find the lowest value.
+            // TODO(nfauvet): compute the variance to find the lowest value.
 			SoundOutput.SafetyBytes = (int)( ( (real32)SoundOutput.SamplesPerSecond * (real32)SoundOutput.BytesPerSample / GameUpdateHz ) / 3.0f );
 
             Win32InitDSound( hWindow, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize );
