@@ -14,9 +14,10 @@ del *.pdb > NUL 2> NUL
 REM set timestamp=%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%
 REM can use %random% also
 REM Optimization switches /O2 /Oi /fp:fast
+echo WAITING FOR PDB > lock.tmp
 cl  %CommonCompilerFlags% ..\code\handmade.cpp /Fmhandmade.map /LD /link /incremental:no /opt:ref /PDB:handmade_%random%.pdb /EXPORT:GameUpdateAndRender /EXPORT:GameGetSoundSamples
+del lock.tmp
 cl  %CommonCompilerFlags% ..\code\win32_handmade.cpp /Fmwin32_handmade.map /link %CommonLinkerFlags% 
-
 REM xcopy win32_handmade.exe ..\data\ /Y
 REM xcopy handmade.dll ..\data\ /Y
 

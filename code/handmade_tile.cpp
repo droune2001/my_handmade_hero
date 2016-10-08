@@ -168,3 +168,18 @@ AreOnSameTile( tile_map_position *A, tile_map_position *B )
 
 	return Result;
 }
+
+tile_map_difference Substract( tile_map *TileMap, tile_map_position *A, tile_map_position *B )
+{
+	tile_map_difference Result;
+
+	real32 dTileX = (real32)A->AbsTileX - (real32)B->AbsTileX;
+	real32 dTileY = (real32)A->AbsTileY - (real32)B->AbsTileY;
+	real32 dTileZ = 0;
+
+	Result.dX = TileMap->TileSideInMeters * dTileX + ( A->OffsetX - B->OffsetX );
+	Result.dY = TileMap->TileSideInMeters * dTileY + ( A->OffsetY - B->OffsetY );
+	Result.dZ = 0;
+
+	return Result;
+}

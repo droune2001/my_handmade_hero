@@ -1,6 +1,13 @@
 #ifndef _HANDMADE_TILE_H_
 #define _HANDMADE_TILE_H_
 
+struct tile_map_difference 
+{
+	real32 dX;
+	real32 dY;
+	real32 dZ;
+};
+
 // world position
 struct tile_map_position
 {

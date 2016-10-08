@@ -17,7 +17,7 @@
 	* GetKeyboardLayout (for French keyboards, international WSAD support)
 */
 
-#include "handmade.h"
+#include "handmade_platform.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -173,17 +173,21 @@ Win32GetLastWriteTime( char *FileName )
 }
 
 internal win32_game_code
-Win32LoadGameCode( char *SourceDLLName, char *TempDLLName )
+Win32LoadGameCode( char *SourceDLLName, char *TempDLLName, char *LockFileName )
 {
 	win32_game_code Result = {};
 
-	Result.DLLLastWriteTime = Win32GetLastWriteTime( SourceDLLName );
-	::CopyFile( SourceDLLName, TempDLLName, FALSE );
-	Result.GameCodeDLL = ::LoadLibraryA( TempDLLName );
-	if ( Result.GameCodeDLL ) {
-		Result.UpdateAndRender = ( game_update_and_render * ) ::GetProcAddress( Result.GameCodeDLL, "GameUpdateAndRender" );
-		Result.GetSoundSamples = ( game_get_sound_samples * ) ::GetProcAddress( Result.GameCodeDLL, "GameGetSoundSamples" );
-		Result.IsValid = ( Result.UpdateAndRender && Result.GetSoundSamples );
+	WIN32_FILE_ATTRIBUTE_DATA Ignored;
+	if ( !::GetFileAttributesExA( LockFileName, GetFileExInfoStandard, &Ignored ) )
+	{
+		Result.DLLLastWriteTime = Win32GetLastWriteTime( SourceDLLName );
+		::CopyFile( SourceDLLName, TempDLLName, FALSE );
+		Result.GameCodeDLL = ::LoadLibraryA( TempDLLName );
+		if ( Result.GameCodeDLL ) {
+			Result.UpdateAndRender = ( game_update_and_render * ) ::GetProcAddress( Result.GameCodeDLL, "GameUpdateAndRender" );
+			Result.GetSoundSamples = ( game_get_sound_samples * ) ::GetProcAddress( Result.GameCodeDLL, "GameGetSoundSamples" );
+			Result.IsValid = ( Result.UpdateAndRender && Result.GetSoundSamples );
+		}
 	}
 
 	if ( !Result.IsValid ) {
@@ -865,6 +869,9 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 	win32_state Win32State = {};
 	Win32GetEXEFileName( &Win32State );
 
+	char GameCodeLockFileFullPath[WIN32_STATE_FILE_NAME_COUNT];
+	Win32BuildEXEPathFileName( &Win32State, "lock.tmp", sizeof( GameCodeLockFileFullPath ), GameCodeLockFileFullPath );
+
 	char SourceGameCodeDLLFullPath[WIN32_STATE_FILE_NAME_COUNT];
 	Win32BuildEXEPathFileName( &Win32State, "handmade.dll", sizeof( SourceGameCodeDLLFullPath ), SourceGameCodeDLLFullPath );
 
@@ -1027,7 +1034,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 				DWORD AudioLatencyBytes = 0;
 				real32 AudioLatencySeconds = 0;
 				
-				win32_game_code Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath );
+				win32_game_code Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath, GameCodeLockFileFullPath );
 				uint32 LoadCounter = 0;
 
                 while ( GlobalRunning )
@@ -1039,7 +1046,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 					if ( ::CompareFileTime( &NewDLLWriteTime, &Game.DLLLastWriteTime ) != 0 )
 					{
 						Win32UnloadGameCode( &Game );
-						Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath );
+						Game = Win32LoadGameCode( SourceGameCodeDLLFullPath, TempGameCodeDLLFullPath, GameCodeLockFileFullPath );
 						LoadCounter = 0;
 					}
 

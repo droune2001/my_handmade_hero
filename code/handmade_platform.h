@@ -38,6 +38,7 @@ extern "C" {
 //
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef int8_t  int8;
 typedef int16_t int16;
@@ -55,6 +56,32 @@ typedef size_t memory_index;
 typedef float real32;
 typedef double real64;
 
+
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.1415926535f
+
+#if HANDMADE_SLOW
+#	define Assert(Expression) if(!(Expression)){*(int *)0 = 0;}
+#else
+#	define Assert(Expression)
+#endif
+
+inline uint32 SafeTruncateSize32( uint64 Value )
+{
+	Assert( Value <= 0xFFFFFFFF );
+	uint32 Result = (uint32)Value;
+	return Result;
+}
+
+#define Kilobytes(val) ((val)*1024LL)
+#define Megabytes(val) (Kilobytes(val)*1024LL)
+#define Gigabytes(val) (Megabytes(val)*1024LL)
+#define Terabytes(val) (Gigabytes(val)*1024LL)
+
+#define ArrayCount(tab) (sizeof(tab) / sizeof((tab)[0]))
 
 // * passed through each execution chain in the game
 // * when you use operating system services, you are going
@@ -177,6 +204,14 @@ typedef struct game_memory
 	debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
 	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 } game_memory;
+
+// accessor just to add an assert.
+inline game_controller_input *GetController( game_input *Input, int ControllerIndex )
+{
+	Assert( ControllerIndex < ArrayCount( Input->Controllers ) );
+	game_controller_input *Result = &Input->Controllers[ControllerIndex];
+	return Result;
+}
 
 #define GAME_UPDATE_AND_RENDER( name ) void name( thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer )
 typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
