@@ -33,7 +33,8 @@ global_variable bool32 GlobalPause = false;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 global_variable LPDIRECTSOUNDBUFFER pGlobalSecondaryBuffer;
 global_variable int64 GlobalPerfCounterFrequency;
-global_variable HCURSOR DEBUGlobalCursor;
+global_variable bool32 DEBUGGlobalShowCursor;
+global_variable WINDOWPLACEMENT GlobalWindowPosition = { sizeof( GlobalWindowPosition ) };
 
 internal void
 CatStrings( size_t SourceACount, char *SourceA,
@@ -367,25 +368,39 @@ internal void Win32ResizeDIBSection( win32_offscreen_buffer *Buffer, int width, 
 internal void Win32CopyBufferToWindow( HDC dc, int client_width, int client_height, 
 									   win32_offscreen_buffer *Buffer )
 {
-	int OffsetX = 10;
-	int OffsetY = 10;
+	if ( ( client_width >= ( Buffer->Width * 2 ) ) && 
+		( client_height >= ( Buffer->Height * 2 ) ) )
+	{
+		::StretchDIBits( dc,
+			0, 0, 2 * Buffer->Width, 2 * Buffer->Height, // FROM
+			0, 0, Buffer->Width, Buffer->Height, // TO
+			Buffer->Memory,
+			&Buffer->Info,
+			DIB_RGB_COLORS, // or DIB_PAL_COLORS for palette
+			SRCCOPY );
+	}
+	else
+	{
+		int OffsetX = 10;
+		int OffsetY = 10;
 
-	// Clear the back in black
-	::PatBlt( dc, 0, 0, client_width, OffsetY, BLACKNESS ); // TOP
-	::PatBlt( dc, 0, OffsetY + Buffer->Height, client_width, client_width, BLACKNESS ); // BOTTOM
-	::PatBlt( dc, 0, 0, OffsetX, client_height, BLACKNESS ); // LEFT
-	::PatBlt( dc, OffsetX + Buffer->Width, 0, client_width, client_height, BLACKNESS ); // RIGHT
+		// Clear the back in black
+		::PatBlt( dc, 0, 0, client_width, OffsetY, BLACKNESS ); // TOP
+		::PatBlt( dc, 0, OffsetY + Buffer->Height, client_width, client_width, BLACKNESS ); // BOTTOM
+		::PatBlt( dc, 0, 0, OffsetX, client_height, BLACKNESS ); // LEFT
+		::PatBlt( dc, OffsetX + Buffer->Width, 0, client_width, client_height, BLACKNESS ); // RIGHT
 
 
-	// Don't stretch. Want to see each and every pixel while learning
-	// how to do a renderer. We could introduce artifacts with stretching.
-	::StretchDIBits( dc,
-		OffsetX, OffsetY, Buffer->Width, Buffer->Height, // FROM
-		0, 0, Buffer->Width, Buffer->Height, // TO
-		Buffer->Memory,
-		&Buffer->Info,
-		DIB_RGB_COLORS, // or DIB_PAL_COLORS for palette
-		SRCCOPY );
+		// Don't stretch. Want to see each and every pixel while learning
+		// how to do a renderer. We could introduce artifacts with stretching.
+		::StretchDIBits( dc,
+			OffsetX, OffsetY, Buffer->Width, Buffer->Height, // FROM
+			0, 0, Buffer->Width, Buffer->Height, // TO
+			Buffer->Memory,
+			&Buffer->Info,
+			DIB_RGB_COLORS, // or DIB_PAL_COLORS for palette
+			SRCCOPY );
+	}
 }
 
 LRESULT CALLBACK Win32MainWindowCallback(	HWND   hwnd,
@@ -399,8 +414,15 @@ LRESULT CALLBACK Win32MainWindowCallback(	HWND   hwnd,
 	{
 		case WM_SETCURSOR:
 		{
-			::SetCursor( DEBUGlobalCursor );
-			//::ShowCursor( TRUE );
+			if ( DEBUGGlobalShowCursor )
+			{
+				// let windows show the cursor.
+				Result = DefWindowProcA( hwnd, uMsg, wParam, lParam );
+			}
+			else
+			{
+				::SetCursor( 0 );
+			}
 		} break;
 
 		case WM_SIZE:
@@ -673,7 +695,39 @@ Win32PlayBackInput( win32_state *Win32State, game_input *NewInput )
 	}
 }
 
+internal void
+ToggleFullscreen( HWND Window )
+{
+	// NOTE: use ChangeDisplaySettings to go into "real" fullscreen mode
+	// with the resolution and frequency we want.
 
+
+	// This follows Raymond Chen's prescription for fullscreen toggling
+	// https://blogs.msdn.microsoft.com/oldnewthing/20100412-00/?p=14353
+	DWORD dwStyle = GetWindowLong( Window, GWL_STYLE );
+	if ( dwStyle & WS_OVERLAPPEDWINDOW )
+	{
+		MONITORINFO MonitorInfo = { sizeof( MonitorInfo ) };
+		if ( GetWindowPlacement( Window, &GlobalWindowPosition ) &&
+			GetMonitorInfo( MonitorFromWindow( Window, MONITOR_DEFAULTTOPRIMARY ), &MonitorInfo ) )
+		{
+			SetWindowLong( Window, GWL_STYLE, dwStyle & ~WS_OVERLAPPEDWINDOW );
+			SetWindowPos( Window, HWND_TOP,
+				MonitorInfo.rcMonitor.left, MonitorInfo.rcMonitor.top,
+				MonitorInfo.rcMonitor.right - MonitorInfo.rcMonitor.left,
+				MonitorInfo.rcMonitor.bottom - MonitorInfo.rcMonitor.top,
+				SWP_NOOWNERZORDER | SWP_FRAMECHANGED );
+		}
+	}
+	else
+	{
+		SetWindowLong( Window, GWL_STYLE, dwStyle | WS_OVERLAPPEDWINDOW );
+		SetWindowPlacement( Window, &GlobalWindowPosition );
+		SetWindowPos( Window, NULL, 0, 0, 0, 0,
+			SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+			SWP_NOOWNERZORDER | SWP_FRAMECHANGED );
+	}
+}
 
 internal void Win32ProcessPendingMessages( win32_state *Win32State, game_controller_input *KeyboardController )
 {
@@ -694,7 +748,8 @@ internal void Win32ProcessPendingMessages( win32_state *Win32State, game_control
                 bool32 bWasDown = ( ( Message.lParam & ( 1 << 30 ) ) != 0 ); // previous state bit
                 bool32 bIsDown = ( ( Message.lParam & ( 1 << 31 ) ) == 0 );
                 bool32 bAltKeyIsDown = ( Message.lParam & ( 1 << 29 ) );
-                if ( bIsDown != bWasDown ) {
+                if ( bIsDown != bWasDown ) 
+				{
                     if ( VKCode == 'W' ) { // Z
                         Win32ProcessKeyboardMessage( &KeyboardController->MoveUp, bIsDown );
                     } else if ( VKCode == 'A' ) { // Q
@@ -720,9 +775,7 @@ internal void Win32ProcessPendingMessages( win32_state *Win32State, game_control
                         Win32ProcessKeyboardMessage( &KeyboardController->Back, bIsDown );
                     } else if ( VKCode == VK_SPACE ) {
                         Win32ProcessKeyboardMessage( &KeyboardController->Start, bIsDown );
-					} else if ( ( VKCode == VK_F4 ) && bAltKeyIsDown ) {
-						GlobalRunning = false;
-					}
+					} 
 #if HANDMADE_INTERNAL
 					else if ( VKCode == 'P' ) 
 					{
@@ -754,7 +807,22 @@ internal void Win32ProcessPendingMessages( win32_state *Win32State, game_control
 					//else if ( ) {
 					//}
 #endif
-                }
+					if ( bIsDown ) 
+					{
+						if ( ( VKCode == VK_F4 ) && bAltKeyIsDown ) 
+						{
+							GlobalRunning = false;
+						}
+						if ( ( VKCode == VK_RETURN ) && bAltKeyIsDown ) 
+						{
+							if ( Message.hwnd )
+							{
+								ToggleFullscreen( Message.hwnd );
+							}
+						}
+					}
+
+                } // if KeyDown
             } break;
             
             default:
@@ -893,12 +961,15 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 	Win32LoadXInput();
     Win32ResizeDIBSection( &GlobalBackBuffer, 960, 540 ); // Half of HD 1080p
    
-	DEBUGlobalCursor = ::LoadCursorA( NULL, IDC_CROSS );
+#if HANDMADE_INTERNAL
+	DEBUGGlobalShowCursor = true;
+#endif
 
     WNDCLASSA WindowClass = {};
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW; // | CS_OWNDC;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = hInstance;
+	WindowClass.hCursor = ::LoadCursorA( NULL, IDC_CROSS );
 	//WindowClass.hIcon = ;
     WindowClass.lpszClassName = "HandmadeHeroWindowClass";
    

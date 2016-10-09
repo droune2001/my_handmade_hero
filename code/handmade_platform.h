@@ -1,7 +1,17 @@
 #ifndef _HANDMADE_HERO_PLATFORM_H_
 #define _HANDMADE_HERO_PLATFORM_H_
 
-// WHAT WE NEED FOR THE PLATFORM LAYER, BARe MINIMUM,
+/*
+HANDMADE_INTERNAL:
+0 - Build for public release
+1 - Build for developer only
+
+HANDMADE_SLOW:
+0 - fast
+1 - slow
+*/
+
+// WHAT WE NEED FOR THE PLATFORM LAYER, BARE MINIMUM,
 // AND USABLE FROM PURE C.
 
 #ifdef __cplusplus
