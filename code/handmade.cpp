@@ -447,33 +447,45 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 			}
 			else
 			{
-				v2 dPlayer = {};
+				v2 ddPlayer = {}; // acceleration (second derivative of PlayerP)
 
 				if ( Controller->MoveUp.EndedDown ){
 					GameState->HeroFacingDirection = 1;
-					dPlayer.Y = 1.0f;
+					ddPlayer.Y = 1.0f;
 				}
 				if ( Controller->MoveDown.EndedDown ){
 					GameState->HeroFacingDirection = 3;
-					dPlayer.Y = -1.0f;
+					ddPlayer.Y = -1.0f;
 				}
 				if ( Controller->MoveRight.EndedDown ){
 					GameState->HeroFacingDirection = 0;
-					dPlayer.X = 1.0f;
+					ddPlayer.X = 1.0f;
 				}
 				if ( Controller->MoveLeft.EndedDown ){
 					GameState->HeroFacingDirection = 2;
-					dPlayer.X = -1.0f;
+					ddPlayer.X = -1.0f;
 				}
 
-				real32 Speed = 5.0f; // m/s
-				if ( Controller->ActionUp.EndedDown ){
-					Speed = 10.0f;
+				if ( ( ddPlayer.X != 0.0f ) && ( ddPlayer.Y != 0.0f ) )
+				{
+					ddPlayer *= 0.707106781187f; // normalize a 45degrees vector
 				}
+
+				real32 Acceleration = 10.0f; // m/s*s
+				if ( Controller->ActionUp.EndedDown ){
+					Acceleration = 30.0f;
+				}
+				ddPlayer *= Acceleration;
+
+				// friction
+				ddPlayer += -2.0f * GameState->dPlayerP;
 
 				// temporary position
 				tile_map_position NewPlayerP = GameState->PlayerP;
-				NewPlayerP.Offset += Input->dtForFrame * Speed * dPlayer;
+				NewPlayerP.Offset = 0.5f * ddPlayer * Square( Input->dtForFrame ) + 
+									GameState->dPlayerP * Input->dtForFrame + 
+									NewPlayerP.Offset;
+				GameState->dPlayerP = ddPlayer * Input->dtForFrame + GameState->dPlayerP;
 				NewPlayerP = RecanonicalizePosition( TileMap, NewPlayerP );
 
 				tile_map_position PlayerLeft = NewPlayerP;
