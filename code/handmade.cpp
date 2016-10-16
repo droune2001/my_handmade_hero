@@ -466,10 +466,10 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 					ddPlayer.X = -1.0f;
 				}
 
-				if ( ( ddPlayer.X != 0.0f ) && ( ddPlayer.Y != 0.0f ) )
-				{
-					ddPlayer *= 0.707106781187f; // normalize a 45degrees vector
-				}
+                if ( ( ddPlayer.X != 0.0f ) && ( ddPlayer.Y != 0.0f ) )
+                {
+                    ddPlayer *= 0.707106781187f; // normalize a 45degrees vector
+                }
 
 				real32 Acceleration = 10.0f; // m/s*s
 				if ( Controller->ActionUp.EndedDown ){
@@ -496,10 +496,49 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				PlayerRight.Offset.X += 0.5f * PlayerWidth;
 				PlayerRight = RecanonicalizePosition( TileMap, PlayerRight );
 
-				// test bottom left, middle and right points.
-				if (IsTileMapPointEmpty( TileMap, PlayerLeft ) &&
-					IsTileMapPointEmpty( TileMap, PlayerRight ) &&
-					IsTileMapPointEmpty( TileMap, NewPlayerP ) )
+                bool32 Collided = false;
+                tile_map_position ColP = {};
+                if (!IsTileMapPointEmpty( TileMap, NewPlayerP ))
+                {
+                    ColP = NewPlayerP;
+                    Collided = true;
+                }
+                if (!IsTileMapPointEmpty( TileMap, PlayerLeft ))
+                {
+                    ColP = PlayerLeft;
+                    Collided = true;
+                }
+                if (!IsTileMapPointEmpty( TileMap, PlayerRight ))
+                {
+                    ColP = PlayerRight;
+                    Collided = true;
+                }
+                
+                // test bottom left, middle and right points.
+				if ( Collided )
+                {
+                    v2 r = {0,0};
+                    if(ColP.AbsTileX < GameState->PlayerP.AbsTileX)
+                    {
+                        r = {1,0};
+                    }
+                    if(ColP.AbsTileX > GameState->PlayerP.AbsTileX)
+                    {
+                        r = {-1,0};
+                    }
+                    if(ColP.AbsTileY < GameState->PlayerP.AbsTileY)
+                    {
+                        r = {0,-1};
+                    }
+                    if(ColP.AbsTileY > GameState->PlayerP.AbsTileY)
+                    {
+                        r = {0,1};
+                    }
+                    
+                    
+                    GameState->dPlayerP = GameState->dPlayerP - 2 * Inner( GameState->dPlayerP, r ) * r;                    
+                }
+                else
 				{
 					if ( !AreOnSameTile( &GameState->PlayerP, &NewPlayerP ) )
 					{
@@ -517,7 +556,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 					// if position validated, commit it.
 					GameState->PlayerP = NewPlayerP;
 				}
-
+                
 				// Z of the camera is always the same as the player
 				GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
 
