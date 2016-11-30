@@ -4,8 +4,15 @@
 // TODO(nfauvet): remove math.h
 #include "math.h"
 
-inline
-real32 AbsoluteValue( real32 Real32 )
+inline real32
+SquareRoot( real32 Real32 )
+{
+	real32 Result = sqrtf( Real32 );
+	return Result;
+}
+
+inline real32 
+AbsoluteValue( real32 Real32 )
 {
 	real32 Result = fabs( Real32 );
 	return Result;
@@ -25,24 +32,24 @@ RotateRight( uint32 Value, int32 Amount )
 	return Result;
 }
 
-inline
-int32 RoundReal32ToInt32( real32 Real32 )
+inline int32 
+RoundReal32ToInt32( real32 Real32 )
 {
 	//int32 Result = (int32)( Real32 + 0.5f );
 	int32 Result = (int32)roundf( Real32 );
 	return Result;
 }
 
-inline
-uint32 RoundReal32ToUInt32( real32 Real32 )
+inline uint32 
+RoundReal32ToUInt32( real32 Real32 )
 {
 	//uint32 Result = (uint32)( Real32 + 0.5f );
 	uint32 Result = (uint32)roundf( Real32 );
 	return Result;
 }
 
-inline
-int32 FloorReal32ToInt32( real32 Real32 )
+inline int32 
+FloorReal32ToInt32( real32 Real32 )
 {
 	if ( Real32 < 0.0f )
 	{
@@ -54,8 +61,8 @@ int32 FloorReal32ToInt32( real32 Real32 )
 	}
 }
 
-inline
-int32 TruncateReal32ToInt32( real32 Real32 )
+inline int32 
+TruncateReal32ToInt32( real32 Real32 )
 {
 	int32 Result = (int32)Real32;
 	return Result;
