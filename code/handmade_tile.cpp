@@ -150,8 +150,8 @@ RecanonicalizeCoord( tile_map *TileMap, uint32 *Tile, real32 *TileRel )
 	*TileRel -= (real32)Offset * TileMap->TileSideInMeters;
 
 	// Assert relative pos well within the bounds of a tile coordinates
-	Assert( *TileRel >= -0.5f * TileMap->TileSideInMeters );
-	Assert( *TileRel <= 0.5f * TileMap->TileSideInMeters );
+	Assert( *TileRel > -0.5001f * TileMap->TileSideInMeters );
+	Assert( *TileRel < 0.5001f * TileMap->TileSideInMeters );
 }
 
 // Takes a canonical which TileRelX and Y have been messed up with, 
