@@ -4,6 +4,14 @@
 // TODO(nfauvet): remove math.h
 #include "math.h"
 
+inline int32
+SignOf(int32 Value)
+{
+	int32 Result = ( Value >= 0 ) ? 1 : -1;
+	//int32 Result = Value >> 31;
+	return Result;
+}
+
 inline real32
 SquareRoot( real32 Real32 )
 {

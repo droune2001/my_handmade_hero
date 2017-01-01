@@ -19,7 +19,7 @@ struct tile_map_position
 	uint32 AbsTileZ;
 
 	// position inside a tile, relative to the center of the tile.
-	v2 Offset;
+	v2 Offset_;
 };
 
 struct tile_chunk_position
