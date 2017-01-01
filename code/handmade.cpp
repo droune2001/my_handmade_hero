@@ -244,8 +244,8 @@ InitializePlayer( game_state *GameState, uint32 EntityIndex )
 	Entity->Exists = true;
 	Entity->P.AbsTileX = 2;
 	Entity->P.AbsTileY = 3;
-	Entity->P.Offset.X = 0.2f;
-	Entity->P.Offset.Y = 0.3f;
+	Entity->P.Offset_.X = 0.0f;
+	Entity->P.Offset_.Y = 0.0f;
 	Entity->Height = 1.4f;
 	Entity->Width = 0.75f * Entity->Height;
 
@@ -270,16 +270,17 @@ AddEntity( game_state *GameState )
 internal void
 TestWall( real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 PlayerDeltaY, real32 *tMin, real32 MinY, real32 MaxY )
 {
-	real32 tEpsilon = 0.001f;
+	real32 tEpsilon = 0.0001f;
 	if ( PlayerDeltaX != 0.0f )
 	{
 		real32 tResult = ( WallX - RelX ) / PlayerDeltaX;
 		real32 Y = RelY + tResult * PlayerDeltaY;
 		if ( ( tResult >= 0.0f ) && ( *tMin > tResult ) )
 		{
-			if ( ( Y >= MinY ) && ( Y < MaxY ) )
+			if ( ( Y >= MinY ) && ( Y <= MaxY ) )
 			{
-				*tMin = Maximum( tEpsilon, tResult - tEpsilon );
+				//*tMin = Maximum( tEpsilon, tResult - tEpsilon );
+				*tMin = Maximum( 0.0f, tResult - tEpsilon );
 			}
 		}
 	}
@@ -309,19 +310,16 @@ MovePlayer( game_state *GameState, entity *Entity, real32 dt, v2 ddP )
 	tile_map_position OldPlayerP = Entity->P;
 	v2 PlayerDelta = ( 0.5f * ddP * Square( dt ) + Entity->dP * dt );
 	Entity->dP = ddP * dt + Entity->dP;
-	tile_map_position NewPlayerP = OldPlayerP;
-	NewPlayerP.Offset += PlayerDelta;
-	NewPlayerP = RecanonicalizePosition( TileMap, NewPlayerP );
-	// TODO(nfauvet): delta function that auto-recanonicalizes
+	tile_map_position NewPlayerP = Offset( TileMap, OldPlayerP, PlayerDelta );
 
 #if 0
 
 	tile_map_position PlayerLeft = NewPlayerP;
-	PlayerLeft.Offset.X -= 0.5f * Entity->Width;
+	PlayerLeft.Offset_.X -= 0.5f * Entity->Width;
 	PlayerLeft = RecanonicalizePosition( TileMap, PlayerLeft );
 
 	tile_map_position PlayerRight = NewPlayerP;
-	PlayerRight.Offset.X += 0.5f * Entity->Width;
+	PlayerRight.Offset_.X += 0.5f * Entity->Width;
 	PlayerRight = RecanonicalizePosition( TileMap, PlayerRight );
 
 	bool32 Collided = false;
@@ -348,7 +346,7 @@ MovePlayer( game_state *GameState, entity *Entity, real32 dt, v2 ddP )
 		v2 r = { 0, 0 };
 		if ( ColP.AbsTileX < Entity->P.AbsTileX )
 		{
-			r = { { { 1, 0 } } };
+			r = { 1, 0 };
 		}
 		if ( ColP.AbsTileX > Entity->P.AbsTileX )
 		{
@@ -356,11 +354,11 @@ MovePlayer( game_state *GameState, entity *Entity, real32 dt, v2 ddP )
 		}
 		if ( ColP.AbsTileY < Entity->P.AbsTileY )
 		{
-			r = { 0, -1 };
+			r = { 0, 1 };
 		}
 		if ( ColP.AbsTileY > Entity->P.AbsTileY )
 		{
-			r = { 0, 1 };
+			r = { 0, -1 };
 		}
 
 		// reflect speed vector for next frame.
@@ -377,46 +375,69 @@ MovePlayer( game_state *GameState, entity *Entity, real32 dt, v2 ddP )
 #else
 
 	// find the rect encompassing the previous_to_new positions
+#if 0
 	uint32 MinTileX = Minimum( OldPlayerP.AbsTileX, NewPlayerP.AbsTileX );
 	uint32 MinTileY = Minimum( OldPlayerP.AbsTileY, NewPlayerP.AbsTileY );
 	uint32 OnePastMaxTileX = Maximum( OldPlayerP.AbsTileX, NewPlayerP.AbsTileX ) + 1;
 	uint32 OnePastMaxTileY = Maximum( OldPlayerP.AbsTileY, NewPlayerP.AbsTileY ) + 1;
+#else
+	uint32 StartTileX = OldPlayerP.AbsTileX;
+	uint32 StartTileY = OldPlayerP.AbsTileY;
+	uint32 EndTileX = NewPlayerP.AbsTileX;
+	uint32 EndTileY = NewPlayerP.AbsTileY;
 
-	uint32 AbsTileZ = 0;
-	tile_map_position BestPlayerP = Entity->P;
+	int DeltaX = SignOf( EndTileX - StartTileX );
+	int DeltaY = SignOf( EndTileY - StartTileY );
+#endif
+
+	uint32 AbsTileZ = Entity->P.AbsTileZ;
 	real32 tMin = 1.0f; //LengthSq( PlayerDelta ); // start at the ideal position as if there were no walls
-	for ( uint32 AbsTileY = MinTileY;
-		AbsTileY != OnePastMaxTileY;
-		++AbsTileY )
+
+	uint32 AbsTileY = StartTileY;
+	for (;;)
 	{
-		for ( uint32 AbsTileX = MinTileX;
-			AbsTileX != OnePastMaxTileX;
-			++AbsTileX )
+		uint32 AbsTileX = StartTileX;
+		for (;;)
 		{
-			tile_map_position TestTileP = CenteredTilePoint( AbsTileX, AbsTileY, AbsTileZ );
-			uint32 TileValue = GetTileValue( TileMap, TestTileP );
-			if ( !IsTileValueEmpty( TileValue ) )
+			tile_map_position TestTileP = CenteredTilePoint(AbsTileX, AbsTileY, AbsTileZ);
+			uint32 TileValue = GetTileValue(TileMap, TestTileP);
+			if (!IsTileValueEmpty(TileValue))
 			{
 				// tile corners relative to the center of the tile
 				v2 MinCorner = { -0.5f * TileMap->TileSideInMeters, -0.5f * TileMap->TileSideInMeters };
 				v2 MaxCorner = { 0.5f * TileMap->TileSideInMeters, 0.5f * TileMap->TileSideInMeters };
 
-				tile_map_difference RelOldPlayerP = Substract( TileMap, &OldPlayerP, &TestTileP );
+				tile_map_difference RelOldPlayerP = Substract(TileMap, &OldPlayerP, &TestTileP);
 				v2 Rel = RelOldPlayerP.dXY; // relative to center of the tile.
 
-				TestWall( MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y, &tMin, MinCorner.Y, MaxCorner.Y );
-				TestWall( MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y, &tMin, MinCorner.Y, MaxCorner.Y );
-				TestWall( MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X, &tMin, MinCorner.X, MaxCorner.X );
-				TestWall( MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X, &tMin, MinCorner.X, MaxCorner.X );
+				TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y, &tMin, MinCorner.Y, MaxCorner.Y);
+				TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y, &tMin, MinCorner.Y, MaxCorner.Y);
+				TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X, &tMin, MinCorner.X, MaxCorner.X);
+				TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X, &tMin, MinCorner.X, MaxCorner.X);
+			}
+
+			if ( AbsTileX == EndTileX )
+			{
+				break;
+			}
+			else 
+			{
+				AbsTileX += DeltaX;
 			}
 		}
-	}
 
+		if ( AbsTileY == EndTileY )
+		{
+			break;
+		}
+		else
+		{
+			AbsTileY += DeltaY;
+		}
+	}
 	
-	NewPlayerP = OldPlayerP;
-	NewPlayerP.Offset += tMin * PlayerDelta;
-	Entity->P = NewPlayerP;
-	NewPlayerP = RecanonicalizePosition( TileMap, NewPlayerP );
+	// commit movement
+	Entity->P = Offset( TileMap, OldPlayerP, tMin * PlayerDelta );
 
 #endif
 
@@ -555,8 +576,14 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
 		const uint32 TilesPerWidth = 17;
 		const uint32 TilesPerHeight = 9;
+#if 0
+		// TODO(nfauvet): waiting for full sparseness
+		uint32 ScreenX = INT32_MAX / 2;
+		uint32 ScreenY = INT32_MAX / 2;
+#else
 		uint32 ScreenX = 0;
 		uint32 ScreenY = 0;
+#endif
 
 		bool32 DoorLeft = false;
 		bool32 DoorRight = false;
@@ -761,16 +788,16 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
 		// Move camera from screen to screen depending on diff in tiles
 		tile_map_difference Diff = Substract( TileMap, &CameraFollowingEntity->P, &GameState->CameraP );
-		if ( Diff.dXY.X > 9.0f * ( TileMap->TileSideInMeters ) ) {
+		if ( Diff.dXY.X > ( 9.0f * TileMap->TileSideInMeters ) ) {
 			GameState->CameraP.AbsTileX += 17;
 		}
-		if ( Diff.dXY.X < -9.0f * ( TileMap->TileSideInMeters ) ) {
+		if ( Diff.dXY.X < ( -9.0f * TileMap->TileSideInMeters ) ) {
 			GameState->CameraP.AbsTileX -= 17;
 		}
-		if ( Diff.dXY.Y > 5.0f * ( TileMap->TileSideInMeters ) ) {
+		if ( Diff.dXY.Y > ( 5.0f * TileMap->TileSideInMeters ) ) {
 			GameState->CameraP.AbsTileY += 9;
 		}
-		if ( Diff.dXY.Y < -5.0f * ( TileMap->TileSideInMeters ) ) {
+		if ( Diff.dXY.Y < ( -5.0f * TileMap->TileSideInMeters ) ) {
 			GameState->CameraP.AbsTileY -= 9;
 		}
 	}
@@ -813,8 +840,8 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 				}
 
 				v2 TileSide = { 0.5f * TileSideInPixels, 0.5f * TileSideInPixels };
-				v2 Center = {	ScreenCenterX - MetersToPixels * GameState->CameraP.Offset.X + (real32)( RelColumn * TileSideInPixels ), // LowerLeftX +
-								ScreenCenterY + MetersToPixels * GameState->CameraP.Offset.Y - (real32)( RelRow * TileSideInPixels ) };
+				v2 Center = {	ScreenCenterX - MetersToPixels * GameState->CameraP.Offset_.X + (real32)( RelColumn * TileSideInPixels ), // LowerLeftX +
+								ScreenCenterY + MetersToPixels * GameState->CameraP.Offset_.Y - (real32)( RelRow * TileSideInPixels ) };
 				v2 Min = Center - 0.9f * TileSide;
 				v2 Max = Center + 0.9f * TileSide;
 				DrawRectangle( Buffer, Min, Max, Gray, Gray, Gray );
