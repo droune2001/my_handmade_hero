@@ -407,7 +407,7 @@ MovePlayer( game_state *GameState, entity *Entity, real32 dt, v2 ddP )
 				v2 MinCorner = { -0.5f * TileMap->TileSideInMeters, -0.5f * TileMap->TileSideInMeters };
 				v2 MaxCorner = { 0.5f * TileMap->TileSideInMeters, 0.5f * TileMap->TileSideInMeters };
 
-				tile_map_difference RelOldPlayerP = Substract(TileMap, &OldPlayerP, &TestTileP);
+				tile_map_difference RelOldPlayerP = Subtract(TileMap, &OldPlayerP, &TestTileP);
 				v2 Rel = RelOldPlayerP.dXY; // relative to center of the tile.
 
 				TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y, &tMin, MinCorner.Y, MaxCorner.Y);
@@ -787,7 +787,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		GameState->CameraP.AbsTileZ = CameraFollowingEntity->P.AbsTileZ;
 
 		// Move camera from screen to screen depending on diff in tiles
-		tile_map_difference Diff = Substract( TileMap, &CameraFollowingEntity->P, &GameState->CameraP );
+		tile_map_difference Diff = Subtract( TileMap, &CameraFollowingEntity->P, &GameState->CameraP );
 		if ( Diff.dXY.X > ( 9.0f * TileMap->TileSideInMeters ) ) {
 			GameState->CameraP.AbsTileX += 17;
 		}
@@ -858,7 +858,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		// TODO(nfauvet): culling of entities not on the same floor as the camera.
 		if ( Entity->Exists )
 		{
-			tile_map_difference Diff = Substract( TileMap, &Entity->P, &GameState->CameraP );
+			tile_map_difference Diff = Subtract( TileMap, &Entity->P, &GameState->CameraP );
 
 			// Draw player
 			real32 PlayerR = 0.0f;

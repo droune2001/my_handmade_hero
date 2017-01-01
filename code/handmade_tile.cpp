@@ -178,7 +178,7 @@ AreOnSameTile( tile_map_position *A, tile_map_position *B )
 	return Result;
 }
 
-tile_map_difference Substract( tile_map *TileMap, tile_map_position *A, tile_map_position *B )
+tile_map_difference Subtract( tile_map *TileMap, tile_map_position *A, tile_map_position *B )
 {
 	tile_map_difference Result;
 
@@ -207,7 +207,7 @@ CenteredTilePoint( uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ )
 inline tile_map_position
 Offset(tile_map *TileMap, tile_map_position P, v2 Offset)
 {
-	P.Offset_ = Offset;
+	P.Offset_ += Offset;
 	P = RecanonicalizePosition(TileMap, P);
 
 	return P;
