@@ -75,8 +75,17 @@ struct low_entity
 	tile_map_position P;
 };
 
+enum entity_type
+{
+	EntityType_Null,
+	EntityType_Hero,
+	EntityType_Wall
+};
+
 struct dormant_entity
 {
+	entity_type Type;
+
 	tile_map_position P;
 	real32 Width, Height;
 
