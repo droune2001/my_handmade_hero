@@ -79,6 +79,8 @@ typedef double real64;
 #	define Assert(Expression)
 #endif
 
+#define InvalidCodePath Assert(!"InvalidCodePath");
+
 inline uint32 SafeTruncateSize32( uint64 Value )
 {
 	Assert( Value <= 0xFFFFFFFF );
