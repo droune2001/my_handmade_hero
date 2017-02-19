@@ -346,8 +346,9 @@ AddPlayer( game_state *GameState )
 	uint32 EntityIndex = AddLowEntity( GameState, EntityType_Hero );
 	low_entity *Entity = GetLowEntity( GameState, EntityIndex );
 
-	Entity->P.AbsTileX = 2;
-	Entity->P.AbsTileY = 3;
+	Entity->P = GameState->CameraP;
+	//Entity->P.AbsTileX = 2;
+	//Entity->P.AbsTileY = 3;
 	Entity->P.Offset_.X = 0.0f;
 	Entity->P.Offset_.Y = 0.0f;
 	Entity->Height = 0.5f; // 1.4f;
@@ -588,10 +589,10 @@ SetCamera( game_state *GameState, tile_map_position NewCameraP )
 	OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
 
 	// move close entities into high
-	uint32 MinTileX = 0; // NewCameraP.AbsTileX - TileSpanX / 2;
-	uint32 MaxTileX = NewCameraP.AbsTileX + TileSpanX/2;
-	uint32 MinTileY = 0; // NewCameraP.AbsTileY - TileSpanY / 2;
-	uint32 MaxTileY = NewCameraP.AbsTileY + TileSpanY/2;
+	int32 MinTileX = 0; // NewCameraP.AbsTileX - TileSpanX / 2;
+	int32 MaxTileX = NewCameraP.AbsTileX + TileSpanX/2;
+	int32 MinTileY = 0; // NewCameraP.AbsTileY - TileSpanY / 2;
+	int32 MaxTileY = NewCameraP.AbsTileY + TileSpanY/2;
 	for (uint32 EntityIndex = 1;
 		EntityIndex < GameState->LowEntityCount;
 		++EntityIndex)
@@ -671,36 +672,18 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		World->TileMap = PushStruct( &GameState->WorldArena, tile_map );
 
 		tile_map *TileMap = World->TileMap;
-		TileMap->ChunkShift = 4; // 16 x 16 tile chunks
-		TileMap->ChunkMask = ( 1 << TileMap->ChunkShift ) - 1; // 0x0010 - 1 = 0x000F
-		TileMap->ChunkDim = ( 1 << TileMap->ChunkShift ); // 16
-
-		TileMap->TileChunkCountX = 128;
-		TileMap->TileChunkCountY = 128;
-		TileMap->TileChunkCountZ = 2;
-
-		// allocate all chunks
-		TileMap->TileChunks = PushArray(
-			&GameState->WorldArena,
-			TileMap->TileChunkCountX *
-			TileMap->TileChunkCountY *
-			TileMap->TileChunkCountZ,
-			tile_chunk );
-
-		TileMap->TileSideInMeters = 1.4f;
+		InitializeTileMap( TileMap, 1.4f );
 
 		uint32 RandomNumberIndex = 0;
 
 		const uint32 TilesPerWidth = 17;
 		const uint32 TilesPerHeight = 9;
-#if 0
-		// TODO(nfauvet): waiting for full sparseness
-		uint32 ScreenX = INT32_MAX / 2;
-		uint32 ScreenY = INT32_MAX / 2;
-#else
-		uint32 ScreenX = 0;
-		uint32 ScreenY = 0;
-#endif
+		uint32 ScreenBaseX = 0;
+		uint32 ScreenBaseY = 0;
+		uint32 ScreenBaseZ = 0;
+		uint32 ScreenX = ScreenBaseX;
+		uint32 ScreenY = ScreenBaseY;
+		uint32 AbsTileZ = ScreenBaseZ;
 
 		bool32 DoorLeft = false;
 		bool32 DoorRight = false;
@@ -709,8 +692,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		bool32 DoorUp = false;
 		bool32 DoorDown = false;
 
-		uint32 AbsTileZ = 0;
-		uint32 NbScreens = 3; // 100
+		uint32 NbScreens = 3;
 		for ( uint32 ScreenIndex = 0; ScreenIndex < NbScreens; ++ScreenIndex ) {
 
 			Assert( RandomNumberIndex < ArrayCount( RandomNumberTable ) );
@@ -728,7 +710,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 			if ( RandomChoice == 2 )
 			{
 				CreatedZDoor = true;
-				if ( AbsTileZ == 0 )
+				if ( AbsTileZ == ScreenBaseZ )
 				{
 					DoorUp = true;
 				}
@@ -813,38 +795,40 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 			DoorRight = false;
 			DoorTop = false;
 
-			if ( RandomChoice == 0 ) {
+			if ( RandomChoice == 0 ) 
+			{
 				ScreenX++;
 			}
-			else if ( RandomChoice == 1 ){
+			else if ( RandomChoice == 1 )
+			{
 				ScreenY++;
 			}
-			else {
-				if ( AbsTileZ == 0 ) {
-					AbsTileZ = 1;
+			else 
+			{
+				if ( AbsTileZ == ScreenBaseZ ) 
+				{
+					AbsTileZ = ScreenBaseZ + 1;
 				}
-				else {
-					AbsTileZ = 0;
+				else 
+				{
+					AbsTileZ = ScreenBaseZ;
 				}
 			}
-
 		}
 
 		// CAMERA
 		tile_map_position NewCameraP = {};
-		NewCameraP.AbsTileX = 17 / 2;
-		NewCameraP.AbsTileY = 9 / 2;
+		NewCameraP.AbsTileX = ScreenBaseX*TilesPerWidth + ( 17 / 2 );
+		NewCameraP.AbsTileY = ScreenBaseY*TilesPerHeight + (9 / 2 );
+		NewCameraP.AbsTileZ = ScreenBaseZ;
 		SetCamera(GameState, NewCameraP);
 
 		Memory->IsInitialized = true;
 	} // END OF INIT
+
 	//
 	//
 	//
-
-
-
-
 
 	world *World = GameState->World;
 	tile_map *TileMap = World->TileMap;

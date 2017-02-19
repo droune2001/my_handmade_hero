@@ -1,17 +1,65 @@
 
+#define TILE_CHUNK_SAFE_MARGIN (INT32_MAX/64)
+#define TILE_CHUNK_UNINITIALIZED INT32_MAX
+
 inline tile_chunk*
-GetTileChunk( tile_map *TileMap, uint32 TileChunkX, uint32 TileChunkY, uint32 TileChunkZ )
+GetTileChunk( tile_map *TileMap, int32 TileChunkX, int32 TileChunkY, int32 TileChunkZ, memory_arena *Arena = 0 )
 {
 	tile_chunk *TileChunk = 0;
 
-	if (( TileChunkX >= 0 ) && ( TileChunkX < TileMap->TileChunkCountX ) &&
-		( TileChunkY >= 0 ) && ( TileChunkY < TileMap->TileChunkCountY ) &&
-		( TileChunkZ >= 0 ) && ( TileChunkZ < TileMap->TileChunkCountZ ) )
+	// coordinates inside a rectangle of the whole available space
+	Assert(TileChunkX > -TILE_CHUNK_SAFE_MARGIN);
+	Assert(TileChunkY > -TILE_CHUNK_SAFE_MARGIN);
+	Assert(TileChunkZ > -TILE_CHUNK_SAFE_MARGIN);
+	Assert(TileChunkX < TILE_CHUNK_SAFE_MARGIN);
+	Assert(TileChunkY < TILE_CHUNK_SAFE_MARGIN);
+	Assert(TileChunkZ < TILE_CHUNK_SAFE_MARGIN);
+
+	uint32 HashValue = 19 * TileChunkX + 7 * TileChunkY + 3 * TileChunkZ;
+	uint32 HashSlot = HashValue & (ArrayCount(TileMap->TileChunkHash) - 1); // mask to array size
+	Assert( HashSlot < ArrayCount(TileMap->TileChunkHash) );
+
+	tile_chunk *Chunk = TileMap->TileChunkHash + HashSlot;
+	do
 	{
-		TileChunk = &TileMap->TileChunks[TileMap->TileChunkCountX * TileMap->TileChunkCountY * TileChunkZ +
-										 TileMap->TileChunkCountX * TileChunkY +
-										 TileChunkX];
-	}
+		if ((TileChunkX == Chunk->TileChunkX) &&
+			(TileChunkY == Chunk->TileChunkY) &&
+			(TileChunkZ == Chunk->TileChunkZ))
+		{
+			TileChunk = Chunk;
+			break;
+		}
+
+		// slot occupied by a valid (Chunk->TileChunkX != TILE_CHUNK_UNINITIALIZED) chunk, but no link yet.
+		if ( Arena && (Chunk->TileChunkX != TILE_CHUNK_UNINITIALIZED) && (!Chunk->NextInHash) )
+		{
+			Chunk->NextInHash = PushStruct( Arena, tile_chunk );
+			Chunk = Chunk->NextInHash;
+			Chunk->TileChunkX = TILE_CHUNK_UNINITIALIZED;
+		}
+
+		// we are either on the newly allocated chunk in the LL or an originally empty one.
+		// uninitialized in any case.
+		if ( Arena && (Chunk->TileChunkX == TILE_CHUNK_UNINITIALIZED))
+		{
+			uint32 TileCount = TileMap->ChunkDim * TileMap->ChunkDim;
+
+			Chunk->TileChunkX = TileChunkX;
+			Chunk->TileChunkY = TileChunkY;
+			Chunk->TileChunkZ = TileChunkZ;
+			Chunk->Tiles = PushArray( Arena, TileCount, uint32 );
+			for (uint32 TileIndex = 0; TileIndex < TileCount; ++TileIndex)
+			{
+				Chunk->Tiles[TileIndex] = 1;
+			}
+			Chunk->NextInHash = 0;
+			TileChunk = Chunk;
+			break;
+		}
+
+		Chunk = Chunk->NextInHash;
+	} while ( Chunk );
+
 	return TileChunk;
 }
 
@@ -113,29 +161,33 @@ SetTileValue( memory_arena *Arena, tile_map *TileMap,
 			  uint32 TileValue )
 {
 	tile_chunk_position ChunkPos = GetChunkPositionFor( TileMap, AbsTileX, AbsTileY, AbsTileZ );
-	tile_chunk *TileChunk = GetTileChunk( TileMap, ChunkPos.TileChunkX, ChunkPos.TileChunkY, ChunkPos.TileChunkZ );
-
-	// allocate on demand
-	Assert( TileChunk );
-	if ( !TileChunk->Tiles ) {
-		uint32 TileCount = TileMap->ChunkDim * TileMap->ChunkDim;
-		TileChunk->Tiles = PushArray( Arena, TileCount, uint32 );
-		// init all allocated tiles to 0
-		for ( uint32 TileIndex = 0; TileIndex < TileCount; ++TileIndex ) {
-			TileChunk->Tiles[TileIndex] = 1;
-		}
-	}
-
+	tile_chunk *TileChunk = GetTileChunk( TileMap, ChunkPos.TileChunkX, ChunkPos.TileChunkY, ChunkPos.TileChunkZ, Arena );
 	SetTileValue( TileMap, TileChunk, ChunkPos.RelTileX, ChunkPos.RelTileY, TileValue );
 }
 
+internal void
+InitializeTileMap(tile_map *TileMap, real32 TileSideInMeters)
+{
+	TileMap->ChunkShift = 4; // 16 x 16 tile chunks
+	TileMap->ChunkMask = (1 << TileMap->ChunkShift) - 1; // 0x0010 - 1 = 0x000F
+	TileMap->ChunkDim = (1 << TileMap->ChunkShift); // 16
+	TileMap->TileSideInMeters = TileSideInMeters;
+
+	for (uint32 TileChunkIndex = 0;
+		TileChunkIndex < ArrayCount(TileMap->TileChunkHash);
+		++TileChunkIndex)
+	{
+		// enough for our test of "uninitialized" chunk
+		TileMap->TileChunkHash[TileChunkIndex].TileChunkX = TILE_CHUNK_UNINITIALIZED;
+	}
+}
 
 //
 //
 //
 
 inline void
-RecanonicalizeCoord( tile_map *TileMap, uint32 *Tile, real32 *TileRel )
+RecanonicalizeCoord( tile_map *TileMap, int32 *Tile, real32 *TileRel )
 {
 	// overflow/underflow if TileRel goes < 0 or > TileSideInMeters
 	// Gives -1, 0 or 1, mostly. Could be 2, -3...
