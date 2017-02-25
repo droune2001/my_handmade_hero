@@ -1048,7 +1048,7 @@ int CALLBACK WinMain(	HINSTANCE hInstance,
 #endif
             // ALLOC all game storage
 			game_memory GameMemory = {};
-            GameMemory.PermanentStorageSize = Megabytes( 64 );
+            GameMemory.PermanentStorageSize = Megabytes( 256 );
             GameMemory.TransientStorageSize = Gigabytes( 1 );
 			// TODO(nfauvet): use MEM_LARGE_PAGES and call AdjustTokenPrivileges when not on WindowsXP ?
             Win32State.TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
