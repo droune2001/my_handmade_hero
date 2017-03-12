@@ -255,7 +255,7 @@ MakeEntityHighFrequency(game_state *GameState, uint32 LowIndex)
 			world_difference Diff = Subtract(GameState->World, &LowEntity->P, &GameState->CameraP);
 			HighEntity->P = Diff.dXY;
 			HighEntity->dP = V2(0, 0);
-			HighEntity->AbsTileZ = LowEntity->P.AbsTileZ;
+			HighEntity->ChunkZ = LowEntity->P.ChunkZ;
 			HighEntity->FacingDirection = 0;
 			HighEntity->LowEntityIndex = LowIndex;
 
@@ -372,9 +372,7 @@ AddWall( game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTile
 	uint32 EntityIndex = AddLowEntity( GameState, EntityType_Wall );
 	low_entity *Entity = GetLowEntity( GameState, EntityIndex );
 
-	Entity->P.AbsTileX = AbsTileX;
-	Entity->P.AbsTileY = AbsTileY;
-	Entity->P.AbsTileZ = AbsTileZ;
+	Entity->P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ );
 	Entity->Height = GameState->World->TileSideInMeters;
 	Entity->Width = Entity->Height;
 	Entity->Collides = true;
@@ -525,7 +523,8 @@ MovePlayer( game_state *GameState, entity Entity, real32 dt, v2 ddP )
 			
 			high_entity *HitHigh = GameState->HighEntities_ + HitHighEntityIndex; // TODO(nfauvet): call a GetHighEntity() which checks bounds;
 			low_entity *HitLow = GetLowEntity( GameState, HitHigh->LowEntityIndex );
-			Entity.High->AbsTileZ += HitLow->dAbsTileZ;
+			// TODO(nfauvet): stairs
+			//Entity.High->AbsTileZ += HitLow->dAbsTileZ;
 		}
 		else 
 		{
@@ -588,6 +587,8 @@ SetCamera( game_state *GameState, world_position NewCameraP )
 	v2 EntityOffsetForFrame = -dCameraP.dXY;
 	OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
 
+// TODO(nfauvet): do it in CHUNK space now
+#if 0
 	// move close entities into high
 	int32 MinTileX = 0; // NewCameraP.AbsTileX - TileSpanX / 2;
 	int32 MaxTileX = NewCameraP.AbsTileX + TileSpanX/2;
@@ -610,6 +611,7 @@ SetCamera( game_state *GameState, world_position NewCameraP )
 			}
 		}
 	}
+#endif
 }
 
 extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
@@ -690,8 +692,10 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		bool32 DoorUp = false;
 		bool32 DoorDown = false;
 
-		uint32 NbScreens = 3;
-		for ( uint32 ScreenIndex = 0; ScreenIndex < NbScreens; ++ScreenIndex ) {
+		uint32 NbScreens = 2000;
+		for ( uint32 ScreenIndex = 0; 
+			ScreenIndex < NbScreens; 
+			++ScreenIndex ) {
 
 			Assert( RandomNumberIndex < ArrayCount( RandomNumberTable ) );
 			uint32 RandomChoice;
@@ -815,9 +819,10 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
 		// CAMERA
 		world_position NewCameraP = {};
-		NewCameraP.AbsTileX = ScreenBaseX*TilesPerWidth + ( 17 / 2 );
-		NewCameraP.AbsTileY = ScreenBaseY*TilesPerHeight + (9 / 2 );
-		NewCameraP.AbsTileZ = ScreenBaseZ;
+		NewCameraP = ChunkPositionFromTilePosition(	GameState->World,
+													ScreenBaseX*TilesPerWidth + ( 17 / 2 ),
+													ScreenBaseY*TilesPerHeight + (9 / 2 ),
+													ScreenBaseZ );
 		SetCamera(GameState, NewCameraP);
 
 		Memory->IsInitialized = true;
@@ -890,7 +895,7 @@ extern "C" GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 		world_position NewCameraP = GameState->CameraP;
 
 		// Z of the camera is always the same as the player
-		NewCameraP.AbsTileZ = CameraFollowingEntity.Low->P.AbsTileZ;
+		NewCameraP.ChunkZ = CameraFollowingEntity.Low->P.ChunkZ;
 
 #if 0
 		// Move camera from screen to screen depending camera space distance

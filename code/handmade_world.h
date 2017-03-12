@@ -10,15 +10,11 @@ struct world_difference
 // world position
 struct world_position
 {
-	// Packed Tile Index
-	// => virtual system into a tile store
-	// => 24bits for chunks index (page)
-	// => 8bits for tiles inside a chunk
-	int32 AbsTileX;
-	int32 AbsTileY;
-	int32 AbsTileZ;
+	int32 ChunkX;
+	int32 ChunkY;
+	int32 ChunkZ;
 
-	// position inside a tile, relative to the center of the tile.
+	// position inside a CHUNK, relative to its center.
 	v2 Offset_;
 };
 
@@ -34,7 +30,8 @@ struct world_chunk
 	int32 ChunkX;
 	int32 ChunkY;
 	int32 ChunkZ;
-
+	
+	// TODO(nfauvet): profile this and deternie if a pointer would be better
 	world_entity_block FirstBlock;
 
 	world_chunk *NextInHash;
@@ -43,13 +40,13 @@ struct world_chunk
 struct world
 {
 	real32 TileSideInMeters;
+	real32 ChunkSideInMeters;
+
+	world_entity_block *FirstFree;
 
 	// TODO(nfauvet): ChunkHash should probably switch to pointers IF
 	// tile entity blocks continue to be stored en masse in the world_chunk!
 	// NOTE(nfauvet): At the moment, this must be a power of two.
-	int32 ChunkShift;
-	int32 ChunkMask;
-	int32 ChunkDim;
 	world_chunk ChunkHash[4096];
 };
 
