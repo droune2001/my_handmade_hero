@@ -38,8 +38,6 @@ AreInSameChunk( world *World, world_position *A, world_position *B )
 inline world_chunk*
 GetWorldChunk( world *World, int32 ChunkX, int32 ChunkY, int32 ChunkZ, memory_arena *Arena = 0 )
 {
-	world_chunk *WorldChunk = 0;
-
 	// coordinates inside a rectangle of the whole available space
 	Assert(ChunkX > -TILE_CHUNK_SAFE_MARGIN);
 	Assert(ChunkY > -TILE_CHUNK_SAFE_MARGIN);
@@ -59,7 +57,6 @@ GetWorldChunk( world *World, int32 ChunkX, int32 ChunkY, int32 ChunkZ, memory_ar
 			(ChunkY == Chunk->ChunkY) &&
 			(ChunkZ == Chunk->ChunkZ))
 		{
-			WorldChunk = Chunk;
 			break;
 		}
 
@@ -80,14 +77,13 @@ GetWorldChunk( world *World, int32 ChunkX, int32 ChunkY, int32 ChunkZ, memory_ar
 			Chunk->ChunkZ = ChunkZ;
 
 			Chunk->NextInHash = 0;
-			WorldChunk = Chunk;
 			break;
 		}
 
 		Chunk = Chunk->NextInHash;
 	} while ( Chunk );
 
-	return WorldChunk;
+	return Chunk;
 }
 
 internal void
@@ -127,7 +123,7 @@ RecanonicalizeCoord( world *World, int32 *Tile, real32 *TileRel )
 // Takes a canonical which TileRelX and Y have been messed up with, 
 // and RE-canonicalize it.
 inline world_position
-MapIntoTileSpace( world *World, world_position BasePos, v2 Offset )
+MapIntoChunkSpace( world *World, world_position BasePos, v2 Offset )
 {
 	world_position Result = BasePos;
 	Result.Offset_ += Offset;
@@ -194,18 +190,21 @@ ChangeEntityLocation( memory_arena *Arena, world* World, uint32 LowEntityIndex,
 		if ( OldP )
 		{
 			// NOTE(nfauvet): Pull the entity out of its old entity block
-			world_chunk *Chunk = GetWorldChunk( World, OldP->ChunkX, OldP->ChunkY, OldP->ChunkZ, Arena );
+			world_chunk *Chunk = GetWorldChunk( World, OldP->ChunkX, OldP->ChunkY, OldP->ChunkZ );
 			Assert( Chunk );
 			if ( Chunk )
 			{
+				bool32 NotFound = true;
 				// find entity in linked list
 				world_entity_block *FirstBlock = &Chunk->FirstBlock;
 				for (world_entity_block *Block = FirstBlock;
-					Block;
+					Block && NotFound;
 					Block = Block->Next)
 				{
 					// scan each block
-					for ( uint32 Index = 0; Index < Block->EntityCount; ++Index )
+					for ( uint32 Index = 0; 
+						( Index < Block->EntityCount ) && NotFound; 
+						++Index )
 					{
 						if ( Block->LowEntityIndex[Index] == LowEntityIndex )
 						{
@@ -231,8 +230,7 @@ ChangeEntityLocation( memory_arena *Arena, world* World, uint32 LowEntityIndex,
 								}
 							}
 
-							Block = 0; // stop the outer for-loop
-							break; // exit the inner for-loop
+							NotFound = false;
 						}
 					}
 				}

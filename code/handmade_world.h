@@ -31,7 +31,7 @@ struct world_chunk
 	int32 ChunkY;
 	int32 ChunkZ;
 	
-	// TODO(nfauvet): profile this and deternie if a pointer would be better
+	// TODO(nfauvet): profile this and determine if a pointer would be better
 	world_entity_block FirstBlock;
 
 	world_chunk *NextInHash;
