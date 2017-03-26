@@ -47,7 +47,8 @@ struct world
 	// TODO(nfauvet): ChunkHash should probably switch to pointers IF
 	// tile entity blocks continue to be stored en masse in the world_chunk!
 	// NOTE(nfauvet): At the moment, this must be a power of two.
-	world_chunk ChunkHash[4096];
+	//world_chunk ChunkHash[4096];
+	world_chunk ChunkHash[16];
 };
 
 #endif // _HANDMADE_WORLD_H_

@@ -11,6 +11,10 @@ IsCanonical( world *World, real32 TileRel )
 	// TODO(nfauvet): Fix floating point math so this can be exact?
 	bool32 Result = ((TileRel >= -0.5f * World->ChunkSideInMeters) &&
 					(TileRel <= 0.5f * World->ChunkSideInMeters));
+	if (Result == false)
+	{
+		return Result;
+	}
 	return Result;
 }
 
@@ -139,15 +143,36 @@ ChunkPositionFromTilePosition( world* World, int32 AbsTileX, int32 AbsTileY, int
 {
 	world_position Result = {};
 
+	if (AbsTileY == 16)
+	{
+		(void)0;
+	}
 	// TOTOD(nfauvet): move to 3D Z!!
 
 	Result.ChunkX = AbsTileX / TILES_PER_CHUNK;
 	Result.ChunkX = AbsTileY / TILES_PER_CHUNK;
 	Result.ChunkZ = AbsTileZ / TILES_PER_CHUNK;
 
-	Result.Offset_.X = (real32)(AbsTileX - (Result.ChunkX * TILES_PER_CHUNK)) * World->TileSideInMeters;
-	Result.Offset_.Y = (real32)(AbsTileY - (Result.ChunkY * TILES_PER_CHUNK)) * World->TileSideInMeters;
+	if (AbsTileX < 0)
+	{
+		--Result.ChunkX;
+	}
+	if (AbsTileY < 0)
+	{
+		--Result.ChunkY;
+	}
+	if (AbsTileZ < 0)
+	{
+		--Result.ChunkZ;
+	}
 
+	// BUG
+	// TODO(nfauvet): find why ChunkX goes from 0 to 1 without having been modified!!!!
+
+	Result.Offset_.X = (real32)((AbsTileX - TILES_PER_CHUNK / 2) - (Result.ChunkX * TILES_PER_CHUNK)) * World->TileSideInMeters;
+	Result.Offset_.Y = (real32)((AbsTileY - TILES_PER_CHUNK / 2) - (Result.ChunkY * TILES_PER_CHUNK)) * World->TileSideInMeters;
+
+	Assert(IsCanonical(World, Result.Offset_));
 	return Result;
 }
 

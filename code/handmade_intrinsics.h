@@ -74,14 +74,17 @@ RoundReal32ToUInt32( real32 Real32 )
 inline int32 
 FloorReal32ToInt32( real32 Real32 )
 {
-	if ( Real32 < 0.0f )
-	{
-		return (int32)( Real32 - 1.0f );
-	}
-	else
-	{
-		return (int32)( Real32 );
-	}
+	//if ( Real32 < 0.0f )
+	//{
+	//	return (int32)( Real32 - 1.0f );
+	//}
+	//else
+	//{
+	//	return (int32)( Real32 );
+	//}
+
+	int32 Result = (int32)floorf(Real32);
+	return Result;
 }
 
 inline int32
