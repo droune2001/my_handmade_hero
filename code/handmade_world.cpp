@@ -143,14 +143,10 @@ ChunkPositionFromTilePosition( world* World, int32 AbsTileX, int32 AbsTileY, int
 {
 	world_position Result = {};
 
-	if (AbsTileY == 16)
-	{
-		(void)0;
-	}
 	// TOTOD(nfauvet): move to 3D Z!!
 
 	Result.ChunkX = AbsTileX / TILES_PER_CHUNK;
-	Result.ChunkX = AbsTileY / TILES_PER_CHUNK;
+	Result.ChunkY = AbsTileY / TILES_PER_CHUNK;
 	Result.ChunkZ = AbsTileZ / TILES_PER_CHUNK;
 
 	if (AbsTileX < 0)
