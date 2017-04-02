@@ -77,6 +77,13 @@ struct high_entity
 	uint32 LowEntityIndex;
 };
 
+#define HIT_POINT_SUB_COUNT 4
+struct hit_point
+{
+	uint8 Flags;
+	uint8 FilledAmount;
+};
+
 struct low_entity
 {
 	entity_type Type;
@@ -88,6 +95,9 @@ struct low_entity
 	int32 dAbsTileZ; // for "stairs"
 
 	uint32 HighEntityIndex;
+
+	uint32 HitPointMax;
+	hit_point HitPoint[16];
 };
 
 struct entity
@@ -95,20 +105,6 @@ struct entity
 	uint32 LowIndex;
 	low_entity *Low;
 	high_entity *High;
-};
-
-struct entity_visible_piece
-{
-	loaded_bitmap *Bitmap;
-	v2 Offset;
-	real32 OffsetZ;
-	real32 Alpha;
-};
-
-struct entity_visible_piece_group
-{
-	uint32 PieceCount;
-	entity_visible_piece Pieces[8];
 };
 
 struct game_state
@@ -133,6 +129,25 @@ struct game_state
 	hero_bitmaps HeroBitmaps[4];
 
 	loaded_bitmap Tree;
+	real32 MetersToPixels;
+};
+
+struct entity_visible_piece
+{
+	loaded_bitmap *Bitmap;
+	v2 Offset;
+	real32 OffsetZ;
+	real32 EntityZC;
+
+	real32 R, G, B, A;
+	v2 Dim;
+};
+
+struct entity_visible_piece_group
+{
+	game_state *GameState;
+	uint32 PieceCount;
+	entity_visible_piece Pieces[32];
 };
 
 #endif // HANDMADE_H

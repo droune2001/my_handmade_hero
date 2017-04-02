@@ -11,10 +11,6 @@ IsCanonical( world *World, real32 TileRel )
 	// TODO(nfauvet): Fix floating point math so this can be exact?
 	bool32 Result = ((TileRel >= -0.5f * World->ChunkSideInMeters) &&
 					(TileRel <= 0.5f * World->ChunkSideInMeters));
-	if (Result == false)
-	{
-		return Result;
-	}
 	return Result;
 }
 
