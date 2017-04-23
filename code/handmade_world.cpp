@@ -218,7 +218,7 @@ ChangeEntityLocationRaw( memory_arena *Arena, world* World, uint32 LowEntityInde
 	Assert(!OldP || IsValid(*OldP));
 	Assert(!NewP || IsValid(*NewP));
 
-	if ( OldP && AreInSameChunk( World, OldP, NewP ) )
+	if ( OldP && NewP && AreInSameChunk( World, OldP, NewP ) )
 	{
 		// NOTE(nfauvet): Leave entity where it is.
 	}
