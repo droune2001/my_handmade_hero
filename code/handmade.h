@@ -13,18 +13,18 @@ struct memory_arena
 	memory_index Used;
 };
 
-internal void
-InitializeArena( memory_arena *Arena, memory_index Size, uint8 *Base )
+inline void
+InitializeArena( memory_arena *Arena, memory_index Size, void *Base )
 {
 	Arena->Size = Size;
-	Arena->Base = Base;
+	Arena->Base = (uint8*)Base;
 	Arena->Used = 0;
 }
 
 #define PushStruct(Arena, type) (type*)PushSize_(Arena, sizeof(type))
 #define PushArray(Arena, Count, type) (type*)PushSize_(Arena, (Count)*sizeof(type))
 
-internal void*
+inline void*
 PushSize_( memory_arena *Arena, memory_index Size )
 {
 	Assert( ( Arena->Used + Size ) <= Arena->Size );
@@ -34,10 +34,23 @@ PushSize_( memory_arena *Arena, memory_index Size )
 	return Result;
 }
 
+#define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
+inline void
+ZeroSize(memory_index Size, void *Ptr)
+{
+	// TODO(nfauvet): check this guy for performance
+	uint8 *Byte = (uint8 *)Ptr;
+	while (Size--)
+	{
+		*Byte++ = 0;
+	}
+}
+
 #include "handmade_intrinsics.h"
 #include "handmade_math.h"
 #include "handmade_world.h"
 #include "handmade_sim_region.h"
+//#include "handmade_entity.h"
 
 struct loaded_bitmap
 {
@@ -60,6 +73,15 @@ struct low_entity
 	sim_entity Sim;
 };
 
+struct controlled_hero
+{
+	uint32 EntityIndex;
+	// NOTE(nfauvet): These are the controller requests for simulation
+	v2 ddP;
+	v2 dSword;
+	real32 dZ;
+};
+
 struct game_state
 {
 	memory_arena WorldArena;
@@ -69,7 +91,7 @@ struct game_state
 	uint32 CameraFollowingEntityIndex;
 	world_position CameraP;
 
-	uint32 PlayerIndexForController[ArrayCount( ( (game_input*)0 )->Controllers )];
+	controlled_hero ControlledHeroes[ArrayCount( ( (game_input*)0 )->Controllers )];
 
 	// TODO(nfauvet):  change name to stored_entities
 	uint32 LowEntityCount;

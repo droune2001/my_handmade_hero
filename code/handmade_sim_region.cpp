@@ -11,11 +11,12 @@ GetHashFromStorageIndex( sim_region *SimRegion, uint32 StorageIndex )
 		++Offset)
 	{
 		// NOTE(nfauvet): masking is a modulo if size is power of two
-		sim_entity_hash *Entry = SimRegion->Hash +
-			((HashValue + Offset) & (ArrayCount(SimRegion->Hash) - 1));
+		uint32 HashMask = ArrayCount(SimRegion->Hash) - 1;
+		uint32 HashIndex = (HashValue + Offset) & HashMask;
+		sim_entity_hash *Entry = SimRegion->Hash +HashIndex;
 
 		// found
-		if ((Entry->Index = 0) || (Entry->Index = StorageIndex))
+		if ((Entry->Index == 0) || (Entry->Index == StorageIndex))
 		{
 			Result = Entry;
 			break;
@@ -130,6 +131,7 @@ internal sim_region*
 BeginSim( memory_arena *SimArena, game_state *GameState, world *World, world_position Origin, rectangle2 Bounds )
 {
 	sim_region *SimRegion = PushStruct( SimArena, sim_region );
+	ZeroStruct(SimRegion->Hash);
 	SimRegion->World = World;
 	SimRegion->Origin = Origin;
 	SimRegion->Bounds = Bounds;
@@ -170,6 +172,8 @@ BeginSim( memory_arena *SimArena, game_state *GameState, world *World, world_pos
 			}
 		}
 	}
+
+	return SimRegion;
 }
 
 internal void
