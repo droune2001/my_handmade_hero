@@ -309,16 +309,31 @@ ChangeEntityLocationRaw( memory_arena *Arena, world* World, uint32 LowEntityInde
 
 internal void
 ChangeEntityLocation(memory_arena *Arena, world* World, 
-	uint32 LowEntityIndex, low_entity *LowEntity,
-	world_position *OldP, world_position *NewP)
+	uint32 LowEntityIndex, low_entity *LowEntity, world_position NewPInit )
 {
+	world_position *OldP = nullptr;
+	world_position *NewP = nullptr;
+
+	if (!IsSet(&LowEntity->Sim, EntityFlag_Nonspatial) && IsValid(LowEntity->P))
+	{
+		OldP = &LowEntity->P;
+	}
+
+	if (IsValid(NewPInit))
+	{
+		NewP = &NewPInit;
+	}
+	
 	ChangeEntityLocationRaw(Arena, World, LowEntityIndex, OldP, NewP);
+
 	if ( NewP )
 	{
 		LowEntity->P = *NewP;
+		ClearFlag(&LowEntity->Sim, EntityFlag_Nonspatial);
 	}
 	else
 	{
 		LowEntity->P = NullPosition();
+		AddFlag(&LowEntity->Sim, EntityFlag_Nonspatial);
 	}
 }

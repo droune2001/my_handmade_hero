@@ -33,11 +33,20 @@ union entity_reference
 	uint32 Index;
 };
 
+enum sim_entity_flags : unsigned int
+{
+	EntityFlag_Collides = (1<<1),
+	EntityFlag_Nonspatial = (1 << 2),
+
+	EntityFlag_Simming = (1U << 31),
+};
+
 struct sim_entity
 {
 	uint32 StorageIndex;
 
 	entity_type Type;
+	uint32 Flags;
 
 	v2 P; // NOTE(nfauvet): relative to the sim_region center.
 	uint32 ChunkZ;
@@ -51,7 +60,6 @@ struct sim_entity
 	uint32 FacingDirection;
 	real32 tBob;
 
-	bool32 Collides;
 	int32 dAbsTileZ; // for "stairs"
 
 	uint32 HighEntityIndex;
